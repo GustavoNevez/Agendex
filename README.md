@@ -6,7 +6,7 @@ A ideia para a criação de um site de gerenciamento de agendamentos surgiu de u
 
 ## Instalação
 
-Instale as dependencias nas duas pastas 'ws' e 'web' usando o Yarn ou Npm.
+Instale as dependencias nas duas pastas, 'ws' e 'web', usando o Yarn ou Npm.
 
 ```bash
     cd ws
@@ -17,7 +17,7 @@ Instale as dependencias nas duas pastas 'ws' e 'web' usando o Yarn ou Npm.
     
 ## Variáveis de Ambiente
 
-Para rodar esse projeto, você vai precisar adicionar as seguintes variáveis de ambiente no seu .env
+Para rodar esse projeto, crie um arquivo .env na pasta raiz do pasta web, e adicione os seguintes campos:
 
 ```bash
     PORT=3000
@@ -26,7 +26,7 @@ Para rodar esse projeto, você vai precisar adicionar as seguintes variáveis de
 ```
 ## Rodando a aplicação
 
-Para rodar o site, primeiro precisamos rodar a ws:
+Para rodar o site, primeiro precisamos rodar nossa banco de dados:
 
 ```bash
     cd ws
