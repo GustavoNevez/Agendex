@@ -1,0 +1,436 @@
+@font-face {
+    font-family: 'Ubuntu';
+    font-style: normal;
+    font-weight: 400;
+    src: local('Ubuntu'), local('Ubuntu-Regular'),
+         url('./assets/fonts/Ubuntu-Regular.ttf') format('truetype');
+  }
+  
+  @font-face {
+    font-family: 'Ubuntu';
+    font-style: italic;
+    font-weight: 400;
+    src: local('Ubuntu Italic'), local('Ubuntu-Italic'),
+         url('./assets/fonts/Ubuntu-Italic.ttf') format('truetype');
+  }
+  
+  @font-face {
+    font-family: 'Ubuntu';
+    font-style: normal;
+    font-weight: 700;
+    src: local('Ubuntu Bold'), local('Ubuntu-Bold'),
+         url('./assets/fonts/Ubuntu-Bold.ttf') format('truetype');
+  }
+  
+  @font-face {
+    font-family: 'Ubuntu';
+    font-style: italic;
+    font-weight: 700;
+    src: local('Ubuntu Bold Italic'), local('Ubuntu-BoldItalic'),
+         url('./assets/fonts/Ubuntu-BoldItalic.ttf') format('truetype');
+  }
+  
+
+:root {
+    /* Definição das variáveis de cores */
+    --primary-light: #FED811;
+    --primary-dark: #E8C511;
+    --dark-dark: #22223B;
+    --dark-light: #2F2F53;
+    --danger: #EF233C;
+    --success: #5DD39E;
+    --white-light: #FAFDF6;
+    --white-dark: #EDEDED;
+}
+
+#root {
+    /* Estilização do contêiner principal */
+    height: 100%;
+    width: 100%;
+    position: 100%;
+    overflow-x: hidden;
+    background-color: white;
+}
+
+sidebar {
+    /* Estilização da barra lateral */
+    background-color: var(--dark-light);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+sidebar ul li {
+    /* Estilização dos itens da lista na barra lateral */
+    list-style: none;
+    width: 100%;
+}
+
+sidebar ul li a {
+    /* Estilização dos links na barra lateral */
+    width: 100%;
+    color: var(--white-light);
+    opacity: 0.5;
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    margin: 5px 6px;
+    text-decoration: none;
+    transition: 0.5s;
+    border-radius: 5px;
+}
+
+sidebar ul li a.active {
+    /* Estilização dos links ativos na barra lateral */
+    opacity: 1;
+    background-color: var(--dark-dark);
+}
+
+sidebar ul li a.active .mdi {
+    /* Estilização dos ícones nos links ativos */
+    color: var(--primary-dark);
+}
+
+sidebar ul li a:visited,
+sidebar ul li a:focus,
+sidebar ul li a:hover {
+    /* Estilização dos links visitados, focados e ao passar o mouse sobre eles */
+    opacity: 1;
+    color: var(--white-light);
+    text-decoration: none;
+    background-color: var(--dark-dark);
+}
+
+sidebar ul li a span.mdi {
+    /* Estilização dos ícones nos links */
+    font-size: 25px;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+sidebar ul li a text {
+    /* Estilização do texto nos links */
+    font-size: 15px;
+    text-decoration: none;
+}
+
+sidebar > div {
+    /* Estilização dos elementos div na barra lateral */
+    display: flex;
+    align-items: center;
+    padding: 10px 0px;
+    margin: 5px 6px;
+    width: 100%;
+}
+
+sidebar > div:hover {
+    /* Estilização das divs ao passar o mouse sobre elas */
+    background-color: rgba(0, 0, 0, 0.2);
+    transition: 0.5s;
+    border-radius: 5px;
+}
+
+.user-name {
+    font-size: 16px;
+    color: var(--white-light);
+    font-weight: bold;
+    margin-left: 20px;
+}
+
+body {
+    /* Estilização geral do corpo da página */
+    font-family: 'Ubuntu', sans-serif;
+}
+
+.calendar-container {
+    /* Estilização do contêiner do calendário */
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+}
+
+/* Calendário */
+.rbc-calendar {
+    border: none;
+    background-color: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0; 
+    padding: 0; 
+}
+
+/* Barra de ferramentas do calendário */
+.rbc-toolbar {
+    background-color: var(--dark-light);
+    color: white;
+    border-radius: 10px 10px 0 0;
+    padding: 10px;
+    margin: 0; 
+}
+
+/* Botões da barra de ferramentas */
+.rbc-toolbar button {
+    color: white;
+    background-color: var(--dark-light);
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin: 0 5px;
+    cursor: pointer;
+}
+
+/* Botões da barra de ferramentas ao passar o mouse */
+.rbc-toolbar button:hover {
+    background-color: var(--dark-dark);
+    color: white;
+}
+
+/* Botões da barra de ferramentas quando selecionados */
+.rbc-toolbar button.rbc-active, button.rbc-visited, button.rbc-focus {
+    background-color: white; 
+    color: black; 
+}
+
+/* Visualizações do calendário */
+.rbc-month-view,
+.rbc-time-view {
+    border-radius: 0 0 10px 10px;
+    background-color: #f9f9f9;
+    margin: 0; 
+    padding: 0; 
+}
+
+/* Eventos do calendário */
+.rbc-event {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+/* Fundo do dia atual */
+.rbc-day-bg + .rbc-today {
+    background-color: #e0f7fa;
+}
+
+/* Botões da barra de ferramentas quando ativos */
+.rbc-btn-group .rbc-active {
+    background-color: #007bff; 
+    color: white; 
+}
+
+/* Botões da barra de ferramentas quando ativos e foco/hover */
+.rbc-btn-group .rbc-active:focus,
+.rbc-btn-group .rbc-active:hover {
+    background-color: #0056b3; 
+    color: white; 
+}
+
+.rbc-header {
+    /* Cabeçalhos do calendário */
+    color: white;
+    border-color: var(--dark-light);
+    border-bottom-width: 2px;
+    background-color:var(--dark-light);
+    padding-top: 25px;
+}
+
+.rbc-header + .rbc-header {
+    /* Cabeçalhos subsequentes do calendário */
+    border-top: 0px;
+    border-left: 0px;
+    border-right: 0px;
+    border-color: var(--dark-light);
+}
+
+.rbc-month-view {
+    /* Visualização mensal do calendário */
+    border-width: 3px;
+    border-top-width: 2px;
+    border-color: var(--dark-light);
+    margin: 0; 
+    padding: 0; 
+}
+
+/* Estilização da visualização de agenda no calendário */
+.rbc-agenda-view {
+    background-color: #f9f9f9;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border: 3px solid var(--dark-light);
+    padding: 20px;
+    margin: 0; 
+}
+
+/* Cabeçalhos da agenda */
+.rbc-agenda-view .rbc-header {
+    color: white;
+    background-color: var(--dark-light);
+    padding: 10px;
+    border-bottom: 2px solid var(--dark-dark);
+}
+
+/* Linhas da agenda */
+.rbc-agenda-view .rbc-agenda-table tbody tr {
+    border-bottom: 1px solid var(--dark-light);
+}
+
+/* Células da agenda */
+.rbc-agenda-view .rbc-agenda-table tbody tr td {
+    padding: 10px;
+}
+
+/* Eventos da agenda */
+.rbc-agenda-view .rbc-event {
+    background-color: var(--primary-light);
+    color: black;
+    border: 1px solid var(--primary-dark);
+    border-radius: 5px;
+    padding: 5px;
+}
+
+/* Estilização do evento ao passar o mouse */
+.rbc-agenda-view .rbc-event:hover {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+/* Dia atual na agenda */
+.rbc-agenda-view .rbc-today {
+    background-color: #e0f7fa;
+    font-weight: bold;
+}
+
+/* Botões da barra de ferramentas ao selecionar a agenda */
+.rbc-toolbar button.rbc-agenda-active {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+/* Botões da barra de ferramentas ao passar o mouse quando agenda selecionada */
+.rbc-toolbar button.rbc-agenda-active:hover {
+    background-color: var(--primary-light);
+    color: black;
+}
+
+/* Visualização de dia no calendário */
+.rbc-day-view {
+    background-color: #f9f9f9;
+    border: 3px solid var(--dark-light);
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    padding: 20px;
+    margin: 0; 
+}
+
+/* Cabeçalhos da visualização de dia */
+.rbc-day-view .rbc-header {
+    color: white;
+    background-color: var(--dark-light);
+    padding: 10px;
+    border-bottom: 2px solid var(--dark-dark);
+}
+
+/* Linhas da visualização de dia */
+.rbc-day-view .rbc-time-slot {
+    border-bottom: 1px solid var(--dark-light);
+}
+
+/* Células da visualização de dia */
+.rbc-day-view .rbc-time-gutter {
+    padding: 10px;
+}
+
+/* Eventos da visualização de dia */
+.rbc-day-view .rbc-event {
+    background-color: var(--primary-light);
+    color: black;
+    border: 1px solid var(--primary-dark);
+    border-radius: 5px;
+    padding: 5px;
+}
+
+/* Estilização do evento ao passar o mouse na visualização de dia */
+.rbc-day-view .rbc-event:hover {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+/* Fundo do dia atual na visualização de dia */
+.rbc-day-view .rbc-today {
+    background-color: #e0f7fa;
+    font-weight: bold;
+}
+
+/* Visualização de semana no calendário */
+.rbc-time-view {
+    background-color: #f9f9f9;
+    border: 3px solid var(--dark-light);
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    padding: 20px;
+    margin: 0; 
+}
+
+/* Cabeçalhos da visualização de semana */
+.rbc-time-view .rbc-header {
+    color: white;
+    background-color: var(--dark-light);
+    padding:3px 5px;
+    border-bottom: 2px solid var(--dark-dark);
+    
+}
+
+.rbc-time-header-content .rbc-allday-cell{
+    height: 0px;
+    position: relative;
+    
+}
+
+
+/* Células da visualização de semana */
+.rbc-time-view .rbc-time-gutter {
+    padding: 10px;
+}
+
+/* Eventos da visualização de semana */
+.rbc-time-view .rbc-event {
+    
+    color: black;
+    border: 1px ;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+/* Estilização do evento ao passar o mouse na visualização de semana */
+.rbc-time-view .rbc-event:hover {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+
+/* Botões da barra de ferramentas ao selecionar o dia */
+.rbc-toolbar button.rbc-day-active {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+/* Botões da barra de ferramentas ao passar o mouse quando dia selecionado */
+.rbc-toolbar button.rbc-day-active:hover {
+    background-color: var(--primary-light);
+    color: black;
+}
+
+/* Botões da barra de ferramentas ao selecionar a semana */
+.rbc-toolbar button.rbc-week-active {
+    background-color: var(--primary-dark);
+    color: white;
+}
+
+/* Botões da barra de ferramentas ao passar o mouse quando semana selecionada */
+.rbc-toolbar button.rbc-week-active:hover {
+    background-color: var(--primary-light);
+    color: black;
+}
