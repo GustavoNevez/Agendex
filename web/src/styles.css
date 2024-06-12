@@ -260,7 +260,7 @@ body {
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
     border: 3px solid var(--dark-light);
-    padding: 20px;
+    
     margin: 0; 
 }
 
@@ -269,7 +269,13 @@ body {
     color: white;
     background-color: var(--dark-light);
     padding: 10px;
-    border-bottom: 2px solid var(--dark-dark);
+    
+    border-top: 20px solid var(--dark-light);
+    
+}
+
+.rbc-agenda-view table.rbc-agenda-table{
+    border:0px;
 }
 
 /* Linhas da agenda */
@@ -279,6 +285,7 @@ body {
 
 /* Células da agenda */
 .rbc-agenda-view .rbc-agenda-table tbody tr td {
+    border-right: 1px solid var(--dark-light);
     padding: 10px;
 }
 
@@ -370,22 +377,28 @@ body {
     border: 3px solid var(--dark-light);
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
-    padding: 20px;
-    margin: 0; 
+    padding: 0px;
+    
+    
 }
 
 /* Cabeçalhos da visualização de semana */
 .rbc-time-view .rbc-header {
     color: white;
     background-color: var(--dark-light);
-    padding:3px 5px;
+    
     border-bottom: 2px solid var(--dark-dark);
+    padding-top:25px;
+    
+;
     
 }
 
 .rbc-time-header-content .rbc-allday-cell{
     height: 0px;
     position: relative;
+    margin-right:0px;
+    
     
 }
 
@@ -433,4 +446,18 @@ body {
 .rbc-toolbar button.rbc-week-active:hover {
     background-color: var(--primary-light);
     color: black;
+}
+.rbc-time-view .rbc-time-header-gutter{
+    background-color: var(--dark-light);
+    
+}
+
+.rbc-time-header-content{
+    border-color:var(--dark-light);
+    margin-right: 0px;
+}
+
+.rbc-time-header.rbc-overflowing {
+    margin-right:0px !important;
+    border-right:0px;
 }
