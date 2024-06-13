@@ -9,7 +9,7 @@ router.post('/register', async (req,res) =>{
     try {
         const existingUser = await Estabelecimento.findOne({ email: req.body.email });
         if (existingUser) {
-                res.status(400).json({ error:'E-mail já está em uso' });
+                res.json({ error:'E-mail já está em uso' });
         }
         const User = await new Estabelecimento(req.body).save();
         User.senha = undefined;
@@ -20,7 +20,7 @@ router.post('/register', async (req,res) =>{
         });     
         return res.json({user:{id:User._id,nome:User.nome},token});
     } catch(err){
-        res.status(400).json({error:'Todos os campos do registro são obrigatorios!'})
+        res.json({error:'Todos os campos do registro são obrigatorios!'})
     }
 });
 
