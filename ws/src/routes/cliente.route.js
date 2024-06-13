@@ -29,7 +29,6 @@ router.get("/clientes/:estabelecimentoId", async (req,res) => {
                 id: c._id,
                 nome:c.nome,
                 email:c.email,
-                telefone:c.telefone,
                 telefone: c.telefone,
                 dataCadastro: moment(c.dataCadastro).format('DD/MM/YYYY'),
                 documento:c.documento,

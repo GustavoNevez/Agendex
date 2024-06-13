@@ -18,7 +18,6 @@ router.post('/', async (req,res) => {
     }
 });
 
-
 router.post('/dias-disponiveis', async (req, res) => {
     try {
         const { data, estabelecimentoIds, servicoId, clienteId } = req.body;
@@ -58,7 +57,6 @@ router.post('/dias-disponiveis', async (req, res) => {
                         )
                     ];
                 }
-
                 const agendamentos = await Agendamento.find({
                     data: {
                         $gte: moment(ultimoDia).startOf('day'),
@@ -93,7 +91,6 @@ router.post('/dias-disponiveis', async (req, res) => {
                     return filteredSlot;
                 });
 
-                // Aqui nós separamos os horários disponíveis individualmente
                 const horariosSeparados = _.flatten(horariosLivres).map(horario => [horario]);
 
                 agenda.push({ [ultimoDia.format('YYYY-MM-DD')]: horariosSeparados });
@@ -127,46 +124,20 @@ router.post('/filtro', async (req,res) =>{
     } catch (err) {
         res.json({ error: true, message: err.message });
     }
-
-   /* try {   
-
-        const { periodo, estabelecimentoId} = req.body;
-
-        const agendamentos = await Agendamento.find({
-            
-            estabelecimentoId,
-            data: {
-                $gte: moment(periodo.start).startOf('day'),
-                $lte: moment(periodo.end).endOf('day'),
-                
-            },
-        }).populate([
-            {path: 'servicoId', select: 'titulo duracao'},
-            {path: 'clienteId', select:'nome'},
-            
-        ]);
-        
-        res.json({error:false, agendamentos});
-    } catch (err) {
-        res.json({error:true,message:err.message})
-    }
-    */
 });
 router.delete('/:agendamentoId', async (req, res) => {
     try {
         const { agendamentoId } = req.params;
-        // Verifique se o ID do agendamento é fornecido
         if (!agendamentoId) {
-            return res.status(400).json({ error: true, message: 'ID do agendamento não fornecido.' });
+            return res.json({ error: true, message: 'ID do agendamento não fornecido.' });
         }
-        // Encontre o agendamento pelo ID e exclua
         const agendamento = await Agendamento.findByIdAndDelete(agendamentoId);
         if (!agendamento) {
-            return res.status(404).json({ error: true, message: 'Agendamento não encontrado.' });
+            return res.json({ error: true, message: 'Agendamento não encontrado.' });
         }
         res.json({ error: false, message: 'Agendamento excluído com sucesso.' });
     } catch (err) {
-        res.status(500).json({ error: true, message: err.message });
+        res.json({ error: true, message: err.message });
     }
 });
 

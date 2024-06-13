@@ -39,7 +39,7 @@ router.delete('/:horarioId', async (req,res) =>{
     try{
         const {horarioId} = req.params;
         await Horario.findByIdAndDelete(horarioId);
-        res.json({error:false});
+        res.json({error:false, message: "Excluido com sucesso!"});
     } catch(err) {
         res.json({ error: true, message: err.message});
     }
