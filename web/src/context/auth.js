@@ -27,19 +27,28 @@ export const AuthProvider = ({children}) => {
 
     
 
-    const signIn = async ({email,senha}) => {
-        const response = await api.post("/auth/auth", {
-            email,
-            senha
-        });
-        if(response.data.error) {
-            showErrorToast(response.data.error);
-        } else {
-            setUser(response.data.user);
-            api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
-           localStorage.setItem("@Auth:token", response.data.token);
-           localStorage.setItem("@Auth:user", JSON.stringify(response.data.user));
-           showSuccessToast("Login realizado com sucesso!");
+    const signIn = async ({ email, senha }) => {
+        try {
+            const response = await api.post("/auth/auth", {
+                email,
+                senha
+            });
+            
+            if (response.data.error) {
+                showErrorToast(response.data.error);
+            } else {
+                setUser(response.data.user);
+                api.defaults.headers.common["Authorization"] = `Bearer ${response.data.token}`;
+                localStorage.setItem("@Auth:token", response.data.token);
+                localStorage.setItem("@Auth:user", JSON.stringify(response.data.user));
+                showSuccessToast("Login realizado com sucesso!");
+            }
+        } catch (error) {
+            if (error.response) { 
+                showErrorToast(error.message);
+            } else {
+                showErrorToast("Ocorreu um erro ao realizar o login. Por favor, tente novamente.");
+            }
         }
     }
 
