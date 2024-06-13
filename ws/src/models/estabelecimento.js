@@ -6,18 +6,23 @@ const estabelecimento = new Schema ({
     nome: {
         type: String,
         default:null,
+        required:true,
     },
     email: {
         type: String,
         default:null,
+        required:true,
     },
     senha: {
         type: String,
         default: null,
         select:false,
+        required:true,
     },
-    telefone: {type: String,
+    telefone: {
+        type: String,
         default:null,
+        
     },
  
     

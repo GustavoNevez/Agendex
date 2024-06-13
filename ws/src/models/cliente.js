@@ -9,14 +9,17 @@ const cliente = new Schema ({
     nome: {
         type: String,
         default:null,
+        required:true,
     },
     email: {
         type: String,
         default:null,
+        required:true,
     },
     senha: {
         type: String,
         default: null,
+        required:true,
     },
    
     
@@ -24,6 +27,7 @@ const cliente = new Schema ({
         type:String,
         enum:['A','I','E'],
         default:'A',
+        required:true,
     },
     
     endereco: {
@@ -34,6 +38,7 @@ const cliente = new Schema ({
         pais:String,
         bairo:String,
         rua:String,
+        required:true,
     },
     documento: {
         tipo: {
