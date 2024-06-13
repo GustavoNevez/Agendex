@@ -32,6 +32,7 @@ const servico = new Schema ({
         required: true,
         enum: ['A','I','E'],
         default: 'A',
+        required:true,
     },
     dataCadastro: {
         type: Date,
