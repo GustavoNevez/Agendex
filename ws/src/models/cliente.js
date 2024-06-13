@@ -1,65 +1,81 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const cliente = new Schema ({
+const clienteSchema = new Schema({
     estabelecimentoId: {
         type: mongoose.Types.ObjectId,
         ref: 'Estabelecimento',
     },
     nome: {
         type: String,
-        default:null,
-        required:true,
+        default: null,
+        required: true,
     },
     email: {
         type: String,
-        default:null,
-        required:true,
+        default: null,
+        required: true,
     },
     senha: {
         type: String,
         default: null,
-        required:true,
+        required: true,
     },
-   
-    
-    status:{
-        type:String,
-        enum:['A','I','E'],
-        default:'A',
-        required:true,
+    status: {
+        type: String,
+        enum: ['A', 'I', 'E'],
+        default: 'A',
+        required: true,
     },
-    
     endereco: {
-        cidade:String,
-        uf:String,
-        cep:String,
-        numero:String,
-        pais:String,
-        bairo:String,
-        rua:String,
-        required:true,
+        cidade: {
+            type: String,
+            required: true,
+        },
+        uf: {
+            type: String,
+            required: true,
+        },
+        cep: {
+            type: String,
+            required: true,
+        },
+        numero: {
+            type: String,
+            required: true,
+        },
+        pais: {
+            type: String,
+            required: true,
+        },
+        bairro: {
+            type: String,
+            required: true,
+        },
+        rua: {
+            type: String,
+            required: true,
+        }
     },
     documento: {
         tipo: {
             type: String,
             enum: ['rg', 'cpf'],
             default: 'cpf',
-            required:true,
+            required: true,
         },
         numero: {
             type: String,
-            required:true,
-        },
+            required: true,
+        }
     },
     dataCadastro: {
-        type:Date,
-        default:Date.now,
+        type: Date,
+        default: Date.now,
     },
-    telefone: String,
-   
-})
+    telefone: {
+        type: String,
+    }
+});
 
-
-
-module.exports = mongoose.model('Cliente', cliente)
+module.exports = mongoose.model('Cliente', clienteSchema);
