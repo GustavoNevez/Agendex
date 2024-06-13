@@ -19,7 +19,7 @@ const clienteSchema = new Schema({
     senha: {
         type: String,
         default: null,
-        required: true,
+        
     },
     status: {
         type: String,
@@ -41,14 +41,6 @@ const clienteSchema = new Schema({
             required: true,
         },
         numero: {
-            type: String,
-            required: true,
-        },
-        pais: {
-            type: String,
-            required: true,
-        },
-        bairro: {
             type: String,
             required: true,
         },

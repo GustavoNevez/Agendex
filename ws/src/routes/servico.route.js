@@ -19,15 +19,16 @@ router.put("/:id/:estabelecimentoId", async (req, res) => {
       const servico = await Servico.findOne({ _id: id, estabelecimentoId });
 
       if (!servico) {
-          return res.status(404).json({ error: true, message: 'Cliente não encontrado ou não pertence ao estabelecimento.' });
+          return res.json({ error: true, message: 'Cliente não encontrado ou não pertence ao estabelecimento.' });
       }
       
       await Servico.findByIdAndUpdate(id, req.body);
       res.json({ error: false, message: 'Cliente atualizado com sucesso!' });
   } catch (err) {
-      res.json({ error: true, message: err.message });
+    res.json({ error: true, message: err.message });
   }
 });
+
 router.get('/estabelecimento/:estabelecimentoId', async (req, res) => {
     try {
       const servicos = await Servico.find({
