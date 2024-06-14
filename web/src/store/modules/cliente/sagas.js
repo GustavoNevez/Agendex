@@ -36,19 +36,14 @@ export function* filterClientes (){
 
     try {
         yield put(updateClientes({estadoFormulario: {...estadoFormulario, filtering:true}}));
-        const { data: response} = yield call(api.post,`/cliente/filter`,  {filters: {email: cliente.email,status:'A',}});     
+        const { data: response} = yield call(api.post,`/cliente/filter`,  {filters: {email: cliente.email}});     
         yield put(updateClientes({estadoFormulario: {...estadoFormulario, filtering:false}}));
-        
-        if (response.error) {
-            showErrorToast(response.message);
-            return false;
-        }
 
         if(response.clientes.length > 0) {
-            yield put(updateClientes({ 
-                estadoFormulario: {...estadoFormulario, filtering: false, disabled: true},
-                cliente: response.clientes[0],
-            }));
+            yield put(updateClientes({ estadoFormulario: {...estadoFormulario, filtering: false, disabled: true}}));
+            
+            showErrorToast('Email ja cadastrado, insira outro email valido!')
+
         } else {
             yield put(updateClientes({estadoFormulario: {...estadoFormulario, disabled:false}}));
         }

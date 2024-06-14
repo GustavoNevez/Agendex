@@ -1,9 +1,9 @@
 import { Table, Button } from 'rsuite';
 const { Column, Cell, HeaderCell } = Table;
 
-const TableComponent = ({ data, config, actions, onRowClick, loading }) => {
+const TableComponent = ({ data, config, actions, onRowClick, loading, locale }) => {
     return (
-        <Table loading={loading} data={data} height={400} onRowClick={onRowClick}>
+        <Table loading={loading} data={data} height={400} onRowClick={onRowClick} locale={{emptyMessage: locale}}>
             {config.map((c) => (
                 <Column flexGrow={!c.width ? 1 : 0} width={c.width} fixed={c.fixed}>
                     <HeaderCell>{c.label}</HeaderCell>
