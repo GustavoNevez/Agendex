@@ -20,10 +20,9 @@ router.post('/', async (req,res) => {
 
 router.post('/dias-disponiveis', async (req, res) => {
     try {
-        const { data, estabelecimentoIds, servicoId, clienteId } = req.body;
+        const { data, estabelecimentoId, servicoId, clienteId } = req.body;
         const servico = await Servico.findById(servicoId).select('duracao');
-        const estabelecimentoId = '6665161912377535a22a708f';
-        const horarios = await Horario.find({ estabelecimentoId }); //Deixei esse horarioId fixo, pois vai ser usado apenas no aplicativo
+        const horarios = await Horario.find({ estabelecimentoId:'6665161912377535a22a708f' }); //Deixei esse horarioId fixo, pois vai ser usado apenas no aplicativo
         
         let agenda = [];
         let ultimoDia = moment(data);
@@ -31,12 +30,16 @@ router.post('/dias-disponiveis', async (req, res) => {
         const servicoDuracao = util.horaParaMinutos(
             moment(servico.duracao).format('HH:mm')
         );
-        
+        console.log(servicoDuracao)
+
         const servicoPartes = util.partesMinutos(
             moment(servico.duracao),
             moment(servico.duracao).add(servicoDuracao, 'minutes'),
             util.DURACAO_SERVICO, false
         ).length;
+
+        console.log(servicoPartes)
+        let logOnce = false;
 
         for (let i = 0; i <= 365 && agenda.length <= 7; i++) {
             const partesValidos = horarios.filter((horario) => {
@@ -57,27 +60,57 @@ router.post('/dias-disponiveis', async (req, res) => {
                         )
                     ];
                 }
+
+                
+
                 const agendamentos = await Agendamento.find({
+                    estabelecimentoId,
                     data: {
                         $gte: moment(ultimoDia).startOf('day'),
                         $lte: moment(ultimoDia).endOf('day'),
                     },
-                }).select('data -_id');
+                }).select('data servicoId -_id');
+
+                let duracaoServicoAgendado
+                for (let agendamento of agendamentos) {
+                    for (let servico of agendamento.servicoId) {
+                        const agendamentoServico = await Servico.findById(servico).select('duracao');
+                        const agendamentoDuracao = util.horaParaMinutos(moment(agendamentoServico.duracao).format('HH:mm'));
+                        duracaoServicoAgendado = agendamentoDuracao
+                    }
+                }
 
                 let horariosOcupados = agendamentos.map((agendamento) => ({
                     inicio: moment(agendamento.data),
-                    final: moment(agendamento.data).add(servicoDuracao, 'minutes'),
+                    final: moment(agendamento.data).add(duracaoServicoAgendado, 'minutes'),
                 }));
-
+                
                 horariosOcupados = horariosOcupados.map((horario) =>
                     util.partesMinutos(horario.inicio, horario.final, util.DURACAO_SERVICO)
                 ).flat();
-
+                
+                
                 let horariosLivres = util.splitByValue(_.uniq(horariosDoDia.map((horario) => {
                     return horariosOcupados.includes(horario) ? '-' : horario;
                 })), '-');
+                
+               /* const partesServicoAgendado = util.partesMinutos(
+                    moment(servico.duracao),
+                    moment(servico.duracao).add(duracaoServicoAgendado, 'minutes'),
+                    util.DURACAO_SERVICO, false
+                ).length;*/
 
+                
+                
                 horariosLivres = horariosLivres.filter((horario) => horario.length >= servicoPartes).flat();
+
+                console.log(horariosLivres)
+                
+                /*horariosLivres = horariosLivres.map((slot) =>
+                    slot.filter(
+                      (horario, index) => slot.length - index >= servicoDuracaoSlots
+                    )
+                  );*/
 
                 horariosLivres = horariosLivres.map((slot) => {
                     let filteredSlot = [];
@@ -90,6 +123,7 @@ router.post('/dias-disponiveis', async (req, res) => {
                     }
                     return filteredSlot;
                 });
+                
 
                 const horariosSeparados = _.flatten(horariosLivres).map(horario => [horario]);
 

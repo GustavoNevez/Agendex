@@ -85,7 +85,7 @@ const Clientes = () => {
                                         onClick={ 
                                             
                                             () => {
-                                                
+                                               
                                             dispatch(filterCliente())
                                         }}>Pesquisar</Button>
                                 </div>
@@ -301,25 +301,22 @@ const Clientes = () => {
                                 <span className="mdi mdi-plus">Novo Cliente</span>
                             </button>
                         </div>
-                    </div>
-                    <Table
-                        className="table-container overflow-hidden"
-                         
-                        loading={estadoFormulario.filtering}
-                        data={clientes}
-                        config={[
-                            {label: 'Nome', key: 'nome', width: 333, fixed:true},
-                            {label: 'E-mail', key: 'email', width: 333, fixed:true},
-                            {label: 'Telefone', key: 'telefone', width: 333, fixed:true},
-                            
-                         
-                        ]}
-                        actions={(cliente) => (
-                            
-                            <Button color="blue" size="xs">Ver informações</Button>
-                        )}
-                        onRowClick={(cliente) => onRowClick(cliente)}                            
-                    />        
+                    </div>                
+                        <Table
+                            className="table-container overflow-hidden"
+                            loading={estadoFormulario.filtering}
+                            data={componentes.drawer ? [] : clientes}
+                            config={[
+                                    {label: 'Nome', key: 'nome', width: 333, fixed:true},
+                                    {label: 'E-mail', key: 'email', width: 333, fixed:true},
+                                    {label: 'Telefone', key: 'telefone', width: 333, fixed:true},                    
+                                ]}
+                                actions={(cliente) => (           
+                                    <Button color="blue" size="xs">Ver informações</Button>
+                                )}
+                                onRowClick={(cliente) => onRowClick(cliente)}
+                                locale="Nenhum cliente cadastrado!"
+                        />         
                 </div>
             </div>
         </div>
