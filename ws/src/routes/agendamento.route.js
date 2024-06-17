@@ -9,12 +9,23 @@ const Horario = require('../models/horario');
 const Agendamento = require('../models/agendamento');
 const _ = require('lodash');
 
-router.post('/', async (req,res) => {
-    try{
-        const agendamento = await new Agendamento(req.body).save();
-        res.json({error:false, agendamento})
-    }catch(err){
-        res.json({error:true, message:err.message});
+router.post('/', async (req, res) => {
+    try {
+        const { servicoId } = req.body;
+        const servico = await Servico.findById(servicoId).select('duracao');
+
+        if (!servico) {
+            return res.json({ error: true, message: 'Serviço não encontrado' });
+        }
+        const duracao = util.horaParaMinutos(moment(servico.duracao).format('HH:mm'));  
+        const agendamento = new Agendamento({
+            ...req.body,
+            duracao
+        });
+        await agendamento.save();
+        res.json({ error: false, agendamento });
+    } catch (err) {
+        res.json({ error: true, message: err.message });
     }
 });
 
@@ -22,24 +33,17 @@ router.post('/dias-disponiveis', async (req, res) => {
     try {
         const { data, estabelecimentoId, servicoId, clienteId } = req.body;
         const servico = await Servico.findById(servicoId).select('duracao');
-        const horarios = await Horario.find({ estabelecimentoId:'6665161912377535a22a708f' }); //Deixei esse horarioId fixo, pois vai ser usado apenas no aplicativo
-        
+        const horarios = await Horario.find({ estabelecimentoId: '6665161912377535a22a708f' }); //Deixei esse horarioId fixo, pois vai ser usado apenas no aplicativo
+
         let agenda = [];
         let ultimoDia = moment(data);
 
-        const servicoDuracao = util.horaParaMinutos(
-            moment(servico.duracao).format('HH:mm')
-        );
-        console.log(servicoDuracao)
-
+        const servicoDuracao = util.horaParaMinutos(moment(servico.duracao).format('HH:mm'));
         const servicoPartes = util.partesMinutos(
             moment(servico.duracao),
             moment(servico.duracao).add(servicoDuracao, 'minutes'),
             util.DURACAO_SERVICO, false
         ).length;
-
-        console.log(servicoPartes)
-        let logOnce = false;
 
         for (let i = 0; i <= 365 && agenda.length <= 7; i++) {
             const partesValidos = horarios.filter((horario) => {
@@ -61,85 +65,45 @@ router.post('/dias-disponiveis', async (req, res) => {
                     ];
                 }
 
-                
-
                 const agendamentos = await Agendamento.find({
                     estabelecimentoId,
                     data: {
                         $gte: moment(ultimoDia).startOf('day'),
                         $lte: moment(ultimoDia).endOf('day'),
                     },
-                }).select('data servicoId -_id');
-
-                let duracaoServicoAgendado
-                for (let agendamento of agendamentos) {
-                    for (let servico of agendamento.servicoId) {
-                        const agendamentoServico = await Servico.findById(servico).select('duracao');
-                        const agendamentoDuracao = util.horaParaMinutos(moment(agendamentoServico.duracao).format('HH:mm'));
-                        duracaoServicoAgendado = agendamentoDuracao
-                    }
-                }
+                }).select('data duracao -_id'); 
 
                 let horariosOcupados = agendamentos.map((agendamento) => ({
                     inicio: moment(agendamento.data),
-                    final: moment(agendamento.data).add(duracaoServicoAgendado, 'minutes'),
+                    final: moment(agendamento.data).add(agendamento.duracao, 'minutes'), 
                 }));
-                
+
                 horariosOcupados = horariosOcupados.map((horario) =>
                     util.partesMinutos(horario.inicio, horario.final, util.DURACAO_SERVICO)
                 ).flat();
-                
-                
-                let horariosLivres = util.splitByValue(_.uniq(horariosDoDia.map((horario) => {
+
+                let horariosLivres = util.splitByValue(horariosDoDia.map((horario) => {
                     return horariosOcupados.includes(horario) ? '-' : horario;
-                })), '-');
-                
-               /* const partesServicoAgendado = util.partesMinutos(
-                    moment(servico.duracao),
-                    moment(servico.duracao).add(duracaoServicoAgendado, 'minutes'),
-                    util.DURACAO_SERVICO, false
-                ).length;*/
+                }), '-').filter(space => space.length > 0 );
 
-                
-                
-                horariosLivres = horariosLivres.filter((horario) => horario.length >= servicoPartes).flat();
-
-                console.log(horariosLivres)
-                
-                /*horariosLivres = horariosLivres.map((slot) =>
+                horariosLivres = horariosLivres.filter((horario) => horario.length >= servicoPartes);
+                           
+                horariosLivres = horariosLivres.map((slot) =>
                     slot.filter(
-                      (horario, index) => slot.length - index >= servicoDuracaoSlots
+                      (horario, index) => slot.length - index >= servicoPartes
                     )
-                  );*/
-
-                horariosLivres = horariosLivres.map((slot) => {
-                    let filteredSlot = [];
-                    for (let i = 0; i < slot.length; i++) {
-                        const remainingSlots = slot.length - i;
-                        if (remainingSlots >= servicoPartes) {
-                            filteredSlot = slot.slice(i);
-                            break;
-                        }
-                    }
-                    return filteredSlot;
-                });
-                
-
+                  );
+             
                 const horariosSeparados = _.flatten(horariosLivres).map(horario => [horario]);
-
                 agenda.push({ [ultimoDia.format('YYYY-MM-DD')]: horariosSeparados });
             }
-
             ultimoDia = moment(ultimoDia).add(1, 'day');
         }
-
         res.json({ error: false, agenda });
-
     } catch (err) {
         res.json({ error: true, message: err.message });
     }
 });
-
 
 router.post('/filtro', async (req,res) =>{
     try {

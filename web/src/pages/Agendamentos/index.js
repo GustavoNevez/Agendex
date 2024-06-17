@@ -88,7 +88,7 @@ const Agendamentos = () => {
         agenda: 'Agenda',
         date: 'Data',
         time: 'Hora',
-        event: 'Evento',
+        event: 'Cliente/Serviço',
         noEventsInRange: 'Não há eventos neste período.',
         showMore: total => `+ Ver mais (${total})`,
     };
@@ -187,7 +187,7 @@ const Agendamentos = () => {
                         popup
                         defaultView='month'
                         messages={messages}
-                        onSelectEvent={handleSelectEvent} 
+                        onSelectEvent={handleSelectEvent}
                     />
                 </div>
             </div>

@@ -30,6 +30,10 @@ const agendamento = new Schema ({
         type:Number,
         default:null,
     }, 
+    duracao: {
+        type: Number,
+        required: null,
+      },
    
     dataCadastro: {
         type:Date,

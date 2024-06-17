@@ -36,7 +36,8 @@ export function* fetchServicos() {
             showErrorToast(response.message);
             return false;
         }
-        yield put(updateServicos(response.servicos));
+        const servicosAtivos = response.servicos.filter(servico => servico.status === 'A');
+        yield put(updateServicos(servicosAtivos));
     } catch (err) {
         showErrorToast(err.message);
     }
