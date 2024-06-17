@@ -41,7 +41,4 @@ module.exports = {
         });
         return newArray;
       },
-    
-
-
 };

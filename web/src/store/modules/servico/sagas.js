@@ -101,7 +101,7 @@ export function* saveServicos() {
             return false;
         }
         yield put(allServicosAction());
-        yield put(updateServico({ componentes: { ...componentes, drawer: false } }));
+        yield put(updateServico({ componentes: { ...componentes, drawer: false, confirmUpdate: false } }));
         yield put(resetServico());
 
     } catch (err) {
