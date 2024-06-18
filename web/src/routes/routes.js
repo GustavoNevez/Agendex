@@ -10,6 +10,7 @@ import NotFound from '../components/NotFound';
 
 import '../styles.css'
 import {BrowserRouter as Router, Route, Switch,useLocation} from 'react-router-dom'
+import Relatorio from '../pages/Relatorio';
 
 
 
@@ -23,12 +24,12 @@ const Routers = () => {
            
                 <Router>
                     
-                    <Sidebar hideOnRoutes={['/agendamentos', '/servico','/cliente']} />        
+                    <Sidebar hideOnRoutes={['/agendamentos', '/servico','/cliente','/relatorio']} />        
                     <Switch>
                                             
                         <PrivateRoute path="/agendamentos" exact component={Agendamentos}/>
                         <PrivateRoute path="/servico" exact component={Servicos}/>
-                            
+                        <PrivateRoute path="/relatorio" exact component={Relatorio}/>        
                         <PrivateRoute path="/cliente" exact component={Cliente}/>
                         <Route path="/registro" exact component={Registro}/>
                         <Route path="/login" exact component={Login}/>

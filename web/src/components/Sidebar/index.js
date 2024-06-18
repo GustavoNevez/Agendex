@@ -2,8 +2,9 @@ import { useContext, useState } from 'react';
 import teste from '../../assets/teste.png';
 import { Link, withRouter } from 'react-router-dom';
 import { AuthContext } from '../../context/auth';
-import { Whisper, IconButton, Modal, Button,Tooltip } from 'rsuite';
+import { Dropdown, Modal, Button, Tooltip, Popover, Whisper } from 'rsuite';
 import ExitIcon from '@rsuite/icons/Exit';
+import UserIcon from '@rsuite/icons/legacy/User';
 
 const Sidebar = ({ location, hideOnRoutes }) => {
     const { user, signed, signOut } = useContext(AuthContext);
@@ -23,9 +24,6 @@ const Sidebar = ({ location, hideOnRoutes }) => {
         signOut();
         setShowLogoutModal(false);
     };
-
-    
-    
 
     return shouldRenderSidebar ? (
         <sidebar className="col-2 h-100 w-100 d-flex flex-column">
@@ -49,15 +47,19 @@ const Sidebar = ({ location, hideOnRoutes }) => {
                         <text>Serviços</text>
                     </Link>
                 </li>
+                <li>
+                    <Link to="/relatorio" className={location.pathname === '/relatorio' ? 'active' : ''}>
+                        <span className="mdi mdi-finance"></span>
+                        <text>Relatórios</text>
+                    </Link>
+                </li>
             </ul>
             <div id="final" className="d-flex align-items-center">
                 <div className="text-right mr-3 w-100 mt-auto d-flex align-items-center justify-content-between">
                     <span className="user-name">{user.nome}</span>
-                    <Whisper placement="bottomStart" trigger="click" speaker={<Tooltip>Click to logout</Tooltip>}>
-                        <IconButton onClick={handleOpenModal} className="red-button" appearance="primary" icon={<ExitIcon />} placement="right">
-                            Sair
-                        </IconButton>
-                    </Whisper>
+                    <Dropdown title={<UserIcon />} placement="topEnd" style={{ marginRight: 10 }}>
+                        <Dropdown.Item onClick={handleOpenModal} icon={<ExitIcon />}>Sair</Dropdown.Item>
+                    </Dropdown>
                 </div>
             </div>
             <Modal show={showLogoutModal} onHide={handleCloseModal}>
