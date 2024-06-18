@@ -34,6 +34,12 @@ const agendamento = new Schema ({
         type: Number,
         required: null,
       },
+      status: {
+        type: String,
+        enum: ['A', 'F', 'E'],
+        default: 'A',
+        required: true,
+    },
    
     dataCadastro: {
         type:Date,

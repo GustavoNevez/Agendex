@@ -129,7 +129,7 @@ router.delete('/:agendamentoId', async (req, res) => {
         if (!agendamentoId) {
             return res.json({ error: true, message: 'ID do agendamento não fornecido.' });
         }
-        const agendamento = await Agendamento.findByIdAndDelete(agendamentoId);
+        const agendamento = await Agendamento.findByIdAndUpdate(agendamentoId, {status:'E'});
         if (!agendamento) {
             return res.json({ error: true, message: 'Agendamento não encontrado.' });
         }
