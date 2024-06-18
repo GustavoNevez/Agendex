@@ -57,3 +57,13 @@ export const deleteAgendamentoSuccess = (id) => ({
     type: types.DELETE_AGENDAMENTO_SUCCESS,
     id,
 });
+
+export const finalizeAgendamento = (id) => ({
+    type: types.FINALIZE_AGENDAMENTO,
+    id,
+});
+
+export const finalizeAgendamentoSuccess = (id) => ({
+    type: types.FINALIZE_AGENDAMENTO_SUCCESS,
+    id,
+});

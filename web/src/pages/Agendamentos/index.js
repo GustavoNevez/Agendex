@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import 'moment/locale/pt-br'; 
+import 'moment/locale/pt-br';
 import moment from 'moment';
 import { useDispatch, useSelector } from 'react-redux';
-import { filtroAgendamento, fetchServicos, fetchClientes, fetchDiasDisponiveis, saveAgendamento, deleteAgendamento, updateAgendamento } from '../../store/modules/agendamento/actions';
+import { filtroAgendamento, fetchServicos, fetchClientes, fetchDiasDisponiveis, saveAgendamento, deleteAgendamento, finalizeAgendamento, updateAgendamento } from '../../store/modules/agendamento/actions';
 import util from '../../util';
 import { Drawer, Button, SelectPicker, DatePicker, Modal, Icon } from 'rsuite';
 import 'rsuite/dist/styles/rsuite-default.css';
-
 
 const localizer = momentLocalizer(moment);
 
@@ -21,9 +20,11 @@ const Agendamentos = () => {
     const [selectedDate, setSelectedDate] = useState(null);
     const [selectedTime, setSelectedTime] = useState(null);
     const [selectedClient, setSelectedClient] = useState(null);
+    const [selectedPrice, setSelectedPrice] = useState(null);
     const [availableTimes, setAvailableTimes] = useState([]);
     const [confirmSave, setConfirmSave] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [confirmFinalize, setConfirmFinalize] = useState(false);
 
     useEffect(() => {
         dispatch(fetchServicos());
@@ -54,7 +55,7 @@ const Agendamentos = () => {
         const nomesClientes = agendamento.clienteId.map((cliente) => cliente.nome).join(", ");
         const titulosServicos = agendamento.servicoId.map((servico) => servico.titulo).join(", ");
         return {
-            _id: agendamento._id, 
+            _id: agendamento._id,
             title: `${nomesClientes} - ${titulosServicos}`,
             start: moment(agendamento.data).toDate(),
             end: moment(agendamento.data).add(util.horaParaMinutos(moment(agendamento.servicoId[0].duracao).format('HH:mm')), 'minutes').toDate(),
@@ -99,13 +100,14 @@ const Agendamentos = () => {
         setSelectedDate(null);
         setSelectedTime(null);
         setSelectedClient(null);
+        setSelectedPrice(null);
         setDrawerOpen(true);
     };
 
     const handleSaveAppointment = () => {
         setConfirmSave(true);
     };
-    
+
     const confirmSaveAppointment = () => {
         if (selectedService && selectedDate && selectedTime && selectedClient) {
             const storedUser = localStorage.getItem("@Auth:user");
@@ -115,6 +117,7 @@ const Agendamentos = () => {
                 data: moment(`${moment(selectedDate).format('YYYY-MM-DD')}T${selectedTime}`).toISOString(),
                 servicoId: selectedService,
                 clienteId: selectedClient,
+                valor: selectedPrice,
             };
             dispatch(saveAgendamento(agendamento));
             setDrawerOpen(false);
@@ -124,19 +127,33 @@ const Agendamentos = () => {
             const start = moment().weekday(0).format('YYYY-MM-DD');
             const end = moment().weekday(30).format('YYYY-MM-DD');
             dispatch(filtroAgendamento(start, end));
-        } 
+        }
     };
 
     const handleDeleteAppointment = () => {
         setConfirmDelete(true);
     };
-    
+
+    const handleFinalizeAppointment = () => {
+        setConfirmFinalize(true);
+    };
+
     const confirmDeleteAppointment = () => {
         if (selectedAppointment) {
             dispatch(deleteAgendamento(selectedAppointment._id));
             setDrawerOpen(false);
             setConfirmDelete(false);
             dispatch(updateAgendamento(agendamentos));
+        }
+    };
+
+    const confirmFinalizeAppointment = () => {
+        if (selectedAppointment) {
+            dispatch(finalizeAgendamento(selectedAppointment._id));
+            setDrawerOpen(false);
+            setConfirmFinalize(false);
+            dispatch(updateAgendamento(agendamentos));
+            
         }
     };
 
@@ -148,7 +165,6 @@ const Agendamentos = () => {
 
     const handleSelectEvent = (event) => {
         setSelectedAppointment(event);
-        
         setDrawerOpen(true);
     };
 
@@ -158,6 +174,7 @@ const Agendamentos = () => {
         setSelectedDate(null);
         setSelectedTime(null);
         setSelectedClient(null);
+        setSelectedPrice(null);
         setDrawerOpen(false);
     };
 
@@ -174,7 +191,7 @@ const Agendamentos = () => {
                                 <span className="mdi mdi-plus">Novo Agendamento</span>
                             </button>
                         </div>
-                    </div>                   
+                    </div>
                     <Calendar
                         localizer={localizer}
                         onRangeChange={(periodo) => {
@@ -194,7 +211,6 @@ const Agendamentos = () => {
 
             <Drawer show={drawerOpen} onHide={handleCloseDrawer} size="sm">
                 <Drawer.Body className="overflow-hidden">
-                    
                     <h3>{selectedAppointment ? "Informações do Agendamento" : "Adicionar Agendamento"}</h3>
                     {selectedAppointment ? (
                         <div className="row mt-3">
@@ -222,7 +238,11 @@ const Agendamentos = () => {
                                     }))}
                                     style={{ width: '100%' }}
                                     value={selectedService}
-                                    onChange={setSelectedService}
+                                    onChange={(value) => {
+                                        setSelectedService(value);
+                                        const selected = servicos.find(servico => servico.id === value);
+                                        setSelectedPrice(selected ? selected.preco : null);
+                                    }}
                                     placeholder="Todos serviços disponiveis"
                                 />
                             </div>
@@ -265,14 +285,19 @@ const Agendamentos = () => {
                         </div>
                     )}
 
-                    <div className="d-flex justify-content-end">
+                    <div className="d-flex justify-content-end mt-3">
+                        {selectedAppointment && (
+                            <Button block className="btn-lg mr-2" size="lg" appearance="primary" color="green" onClick={handleFinalizeAppointment}>
+                                <Icon icon="check" /> Finalizar Agendamento
+                            </Button>
+                        )}
                         {selectedAppointment ? (
-                            <Button block className="btn-lg mt-3" size="lg" appearance="primary" color="red" onClick={handleDeleteAppointment}>
-                               <Icon icon="trash" /> Deletar
+                            <Button block className="btn-lg" size="lg" appearance="primary" color="red" onClick={handleDeleteAppointment}>
+                                <Icon icon="trash" /> Deletar
                             </Button>
                         ) : (
-                            <Button block className="btn-lg mt-3" size="lg" appearance="primary" color="green" onClick={handleSaveAppointment} disabled={!isSaveButtonEnabled}>
-                               <Icon icon="save" /> Salvar
+                            <Button block className="btn-lg" size="lg" appearance="primary" color="green" onClick={handleSaveAppointment} disabled={!isSaveButtonEnabled}>
+                                <Icon icon="save" /> Salvar
                             </Button>
                         )}
                     </div>
@@ -288,6 +313,7 @@ const Agendamentos = () => {
                         <p><b>Cliente:</b> {clientes.find(cliente => cliente.id === selectedClient)?.nome}</p>
                         <p><b>Data:</b> {moment(selectedDate).format('YYYY-MM-DD')}</p>
                         <p><b>Horário:</b> {selectedTime}</p>
+                        <p><b>Preço:</b> R$ {selectedPrice}</p>
                     </div>
                 </Modal.Body>
                 <Modal.Footer>
@@ -310,6 +336,21 @@ const Agendamentos = () => {
                         Sim
                     </Button>
                     <Button onClick={() => setConfirmDelete(false)} appearance="subtle">
+                        Não
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal backdrop="static" show={confirmFinalize} onHide={() => setConfirmFinalize(false)} size="md">
+                <Modal.Body>
+                    <Icon icon="remind" style={{ color: '#ffb300', fontSize: 24 }} />
+                    {' '}Tem certeza que deseja finalizar o agendamento?
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={confirmFinalizeAppointment} appearance="primary">
+                        Sim
+                    </Button>
+                    <Button onClick={() => setConfirmFinalize(false)} appearance="subtle">
                         Não
                     </Button>
                 </Modal.Footer>

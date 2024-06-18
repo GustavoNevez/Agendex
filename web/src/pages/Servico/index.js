@@ -272,6 +272,7 @@ const Servicos = () => {
                             <Button color="blue" size="xs">Ver informações</Button>
                         )}
                         onRowClick={(servico) => onRowClick(servico)}
+                        locale="Nenhum serviço cadastrado!"
                     />
                 </div>
             </div>

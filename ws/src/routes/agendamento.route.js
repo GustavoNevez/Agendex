@@ -67,6 +67,7 @@ router.post('/dias-disponiveis', async (req, res) => {
 
                 const agendamentos = await Agendamento.find({
                     estabelecimentoId,
+                    status: 'A',
                     data: {
                         $gte: moment(ultimoDia).startOf('day'),
                         $lte: moment(ultimoDia).endOf('day'),
@@ -134,6 +135,58 @@ router.delete('/:agendamentoId', async (req, res) => {
             return res.json({ error: true, message: 'Agendamento não encontrado.' });
         }
         res.json({ error: false, message: 'Agendamento excluído com sucesso.' });
+    } catch (err) {
+        res.json({ error: true, message: err.message });
+    }
+});
+
+router.put('/concluido/:agendamentoId', async (req, res) => {
+    try {
+        const { agendamentoId } = req.params;
+        if (!agendamentoId) {
+            return res.json({ error: true, message: 'ID do agendamento não fornecido.' });
+        }
+        const agendamento = await Agendamento.findByIdAndUpdate(agendamentoId, {status:'F'});
+        if (!agendamento) {
+            return res.json({ error: true, message: 'Agendamento não encontrado.' });
+        }
+        res.json({ error: false, message: 'Agendamento finalizado com sucesso.' });
+    } catch (err) {
+        res.json({ error: true, message: err.message });
+    }
+});
+
+
+router.post('/relatorio', async (req, res) => {
+    try {
+        const { periodo, estabelecimentoId } = req.body;
+        const startDate = moment(periodo.inicio).startOf('day');
+        const endDate = moment(periodo.final).endOf('day');
+
+        // Filtra agendamentos com status 'F' dentro do período especificado
+        const agendamentos = await Agendamento.find({ 
+            estabelecimentoId,
+            status: 'F',  // Filtra apenas agendamentos com status 'F'
+            data: {
+                $gte: startDate.toDate(),
+                $lte: endDate.toDate()
+            }
+        }).select('data duracao valor').populate([
+            { path: 'servicoId', select: 'titulo duracao' },
+            { path: 'clienteId', select: 'nome' }
+        ]);
+
+        // Calcula o total de dinheiro
+        const totalDinheiro = agendamentos.reduce((sum, agendamento) => sum + agendamento.valor, 0);
+
+        // Monta o objeto relatorio
+        const relatorio = {
+            numeroAgendamentos: agendamentos.length,
+            totalDinheiro,
+            agendamentos,
+        };
+
+        res.json({ error: false, relatorio });
     } catch (err) {
         res.json({ error: true, message: err.message });
     }

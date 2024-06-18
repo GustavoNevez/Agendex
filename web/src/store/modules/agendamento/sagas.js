@@ -1,7 +1,7 @@
 import { all, takeLatest, call, put } from 'redux-saga/effects';
 import api from '../../../services/api';
 import types from './types';
-import { updateAgendamento, updateServicos, updateDiasDisponiveis, updateClientes, deleteAgendamentoSuccess } from './actions';
+import { updateAgendamento, updateServicos, updateDiasDisponiveis, updateClientes, deleteAgendamentoSuccess,finalizeAgendamentoSuccess } from './actions';
 import { showErrorToast, showSuccessToast } from '../../../utils/notifications';
 
 export function* filterAgendamento({ start, end }) {
@@ -38,6 +38,7 @@ export function* fetchServicos() {
             return false;
         }
         const servicosAtivos = response.servicos.filter(servico => servico.status === 'A');
+        console.log(servicosAtivos)
         yield put(updateServicos(servicosAtivos));
     } catch (err) {
         showErrorToast(err.message);
@@ -105,6 +106,20 @@ export function* deleteAgendamento({ id }) {
     }
 }
 
+export function* finalizeAgendamento({ id }) {
+    try {
+        const { data: response } = yield call(api.put, `/agendamento/concluido/${id}`);
+        if (response.error) {
+            showErrorToast(response.message);
+            return false;
+        }
+        yield put(finalizeAgendamentoSuccess(id));
+        showSuccessToast('Agendamento finalizado com sucesso!');
+    } catch (err) {
+        showErrorToast(err.message);
+    }
+}
+
 export default all([
     takeLatest(types.FILTRO_AGENDAMENTOS, filterAgendamento),
     takeLatest(types.FETCH_SERVICOS, fetchServicos),
@@ -112,4 +127,5 @@ export default all([
     takeLatest(types.FETCH_DIAS_DISPONIVEIS, fetchDiasDisponiveis),
     takeLatest(types.SAVE_AGENDAMENTO, saveAgendamento),
     takeLatest(types.DELETE_AGENDAMENTO, deleteAgendamento),
+    takeLatest(types.FINALIZE_AGENDAMENTO, finalizeAgendamento),
 ]);
