@@ -16,11 +16,7 @@ const INITIAL_STATE = {
     cliente: {
         nome:'',
         email:'',
-        nomePet:'',
-        raca:'',
-        idadePet:'',
         telefone:'',
-        tamanho:'',
         documento: {
             tipo:'cpf',
             numero:'',

@@ -20,7 +20,8 @@ export function* filterAgendamento({ start, end }) {
             showErrorToast(response.message);
             return false;
         }
-        yield put(updateAgendamento(response.agendamentos));
+        const agendamentosAtivos = response.agendamentos.filter(agendamento => agendamento.status === 'A');
+        yield put(updateAgendamento(agendamentosAtivos));
     } catch (err) {
         showErrorToast(err.message);
     }
