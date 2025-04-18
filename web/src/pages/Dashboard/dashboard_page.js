@@ -24,7 +24,7 @@ function Dashboard() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-6"style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
         <p className="text-gray-600">Bem-vindo ao seu painel de controle</p>
@@ -121,13 +121,28 @@ function Dashboard() {
             <div className="text-xs font-medium text-gray-500 uppercase">Sáb</div>
             
             {/* Dias do calendário (exemplo) */}
-            <div className="p-2 border rounded-md">26</div>
-            <div className="p-2 border rounded-md">27</div>
-            <div className="p-2 border rounded-md">28</div>
-            <div className="p-2 border rounded-md">29</div>
-            <div className="p-2 border rounded-md">30</div>
-            <div className="p-2 border rounded-md">31</div>
-            <div className="p-2 border rounded-md">1</div>
+            <button className="p-3 shadow-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+              <span className="text-gray-700 font-medium">26</span>
+            </button>
+            <button className="p-3 shadow-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+              <span className="text-gray-700 font-medium">27</span>
+            </button>
+            <button className="p-3 shadow-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+              <span className="text-gray-700 font-medium">28</span>
+            </button>
+            <button className="p-3 shadow-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+              <span className="text-gray-700 font-medium">29</span>
+            </button>
+            <button className="p-3 bg-blue-50 border-blue-300 border shadow-sm rounded-md hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+              <span className="text-blue-700 font-semibold">30</span>
+              <div className="mt-1 w-1.5 h-1.5 mx-auto rounded-full bg-blue-500"></div>
+            </button>
+            <button className="p-3 shadow-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+              <span className="text-gray-700 font-medium">31</span>
+            </button>
+            <button className="p-3 shadow-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+              <span className="text-gray-700 font-medium">1</span>
+            </button>
           </div>
         </div>
       </div>

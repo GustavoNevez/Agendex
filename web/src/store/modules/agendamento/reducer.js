@@ -19,7 +19,8 @@ const INITIAL_STATE = {
     agendamentosDisponiveis: [],
     servicos: [],
     diasDisponiveis: [],
-    clientes: [], // Adicionando lista de clientes
+    clientes: [], // Lista de clientes
+    profissionais: [], // Lista de profissionais
 };
 
 function agendamento(state = INITIAL_STATE, action) {
@@ -42,6 +43,11 @@ function agendamento(state = INITIAL_STATE, action) {
         case types.UPDATE_CLIENTES: {
             return produce(state, (draft) => {
                 draft.clientes = action.clientes || [];
+            });
+        }
+        case types.UPDATE_PROFISSIONAIS: {
+            return produce(state, (draft) => {
+                draft.profissionais = action.profissionais || [];
             });
         }
         case types.DELETE_AGENDAMENTO_SUCCESS: {

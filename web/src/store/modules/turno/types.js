@@ -1,0 +1,17 @@
+// src/store/modules/turno/types.js
+
+const types = {
+    UPDATE_TURNOS: '@turno/UPDATE_TURNOS',
+    FETCH_TURNOS: '@turno/FETCH_TURNOS',
+    SAVE_TURNO: '@turno/SAVE_TURNO',
+    SAVE_TURNO_SUCCESS: '@turno/SAVE_TURNO_SUCCESS',
+    UPDATE_TURNO: '@turno/UPDATE_TURNO',
+    UPDATE_TURNO_SUCCESS: '@turno/UPDATE_TURNO_SUCCESS',
+    DELETE_TURNO: '@turno/DELETE_TURNO',
+    DELETE_TURNO_SUCCESS: '@turno/DELETE_TURNO_SUCCESS',
+    ACTIVATE_TURNO: '@turno/ACTIVATE_TURNO',
+    DEACTIVATE_TURNO: '@turno/DEACTIVATE_TURNO',
+    TOGGLE_TURNO_STATUS_SUCCESS: '@turno/TOGGLE_TURNO_STATUS_SUCCESS',
+};
+
+export default types;

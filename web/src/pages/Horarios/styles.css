@@ -1,0 +1,235 @@
+/* Horarios Page Styles */
+
+.schedule-days-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.day-schedule-row {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: white;
+}
+
+.day-name-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.day-name {
+  font-weight: 600;
+  color: #495057;
+}
+
+.time-slots-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.time-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.time-select {
+  width: 120px;
+}
+
+.time-separator {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.time-actions {
+  display: flex;
+  align-items: center;
+}
+
+.remove-slot-btn {
+  padding: 6px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.remove-slot-btn:hover {
+  background-color: #f8d7da;
+}
+
+.shift-label {
+  font-weight: 600;
+  color: #495057;
+  padding-left: 5px;
+  border-left: 3px solid #4CAF50;
+}
+
+.add-time-slot-btn {
+  margin-top: 12px;
+  border: 1px dashed #ced4da;
+  padding: 8px;
+  border-radius: 6px;
+  color: #6c757d;
+  transition: all 0.2s;
+}
+
+.add-time-slot-btn:hover {
+  border-color: #6c757d;
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.interval-info-container {
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.interval-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.interval-value {
+  display: flex;
+  align-items: center;
+}
+
+.interval-dropdown {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #f8f9fa;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-weight: 500;
+  color: #495057;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .time-slot {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .time-inputs {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .time-select {
+    width: calc(50% - 20px);
+  }
+  
+  .time-actions {
+    margin-top: 4px;
+  }
+  
+  .day-name-container {
+    padding: 10px 12px;
+  }
+  
+  .time-slots-container {
+    padding: 12px;
+  }
+  
+  .add-time-slot-btn {
+    font-size: 14px;
+  }
+}
+
+/* Animation for toggling time slots */
+.time-slots-container {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Toggle switch custom style */
+.rs-toggle-inner:not(.rs-toggle-md) .rs-toggle-presentation {
+  background-color: #e9ecef;
+}
+
+.rs-toggle.rs-toggle-checked:not(.rs-toggle-disabled) .rs-toggle-presentation {
+  background-color: #4CAF50;
+}
+
+/* Time picker custom style */
+.rs-picker-toggle {
+  padding: 7px 12px;
+}
+
+.rs-picker-toggle-textbox {
+  text-align: center;
+}
+
+.rs-modal {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+.rs-modal-dialog {
+  margin: 0 auto !important;
+  top: 0 !important;
+  transform: none !important;
+}
+
+
+.rs-modal-content {
+  border-radius: 10px;
+  padding: 0px 0px 0px 0px;
+ 
+}
+.rs-modal-header {
+  
+  height: 50px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  
+}
+
+
+
+.rs-modal-header .rs-modal-close {
+  margin: 0;
+  padding: 0;
+  
+}
+.rs-modal-header .rs-modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #495057;
+  padding-top: 8px;
+}
+

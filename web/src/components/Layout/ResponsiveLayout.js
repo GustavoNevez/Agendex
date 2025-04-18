@@ -49,7 +49,7 @@ function ResponsiveLayout({ children }) {
       
       {/* Main content area - adjusts based on sidebar state */}
       <main 
-        className={`transition-all duration-300 pt-4 px-4 pb-16 md:pt-6 md:px-6 md:pb-6 ${
+        className={`transition-all duration-300 pt-4 px-2 pb-16 md:pt-6 md:px-3 md:pb-6 ${
           sidebarExpanded ? "md:ml-64" : "md:ml-16"
         }`}
       >

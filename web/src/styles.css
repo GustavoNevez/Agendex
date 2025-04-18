@@ -383,3 +383,56 @@ body {
     margin-right:0px !important;
     border-right:0px;
 }
+
+/* React Suite Picker Menu Styles */
+.rs-picker-menu {
+    position: fixed !important;
+    z-index: 9999 !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+    transform: none !important;
+    max-height: 80vh !important;
+    overflow: auto !important;
+    left: 50% !important;
+    margin-left: -150px !important; /* Half of max-width to center it */
+    max-width: 300px !important;
+    width: calc(100% - 30px) !important; /* Keeps it from touching screen edges */
+}
+
+/* Date Picker Calendar Specific Styles */
+.rs-picker-menu .rs-calendar {
+    width: 100% !important;
+    max-width: 300px !important;
+    margin: 0 auto !important;
+}
+
+.rs-picker-menu .rs-calendar-table {
+    width: 100% !important;
+    max-width: 300px !important;
+}
+
+/* Ensure calendar appears in view on mobile */
+@media (max-width: 480px) {
+    .rs-picker-menu {
+        left: 50% !important;
+        margin-left: -130px !important;
+        max-width: 260px !important;
+    }
+}
+
+/* Time Picker Specific Styles */
+.rs-picker-menu .rs-picker-select-menu {
+    width: auto !important;
+    max-width: 190px !important;
+}
+
+/* Prevent menu from affecting page layout */
+.rs-picker-menu {
+    display: block !important;
+    pointer-events: auto !important;
+}
+
+/* Ensure picker dropdowns don't expand or break modal */
+.rs-picker-toggle-wrapper {
+    position: relative !important;
+    width: 100% !important;
+}

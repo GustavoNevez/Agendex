@@ -4,13 +4,17 @@ import PrivateRoute from './privateRoutes';
 import NotFound from '../components/NotFound';
 
 // Páginas
-import Agendamentos from '../pages/Agendamentos';
-import Cliente from '../pages/Clientes';
-import Servicos from '../pages/Servico';
-import Relatorio from '../pages/Relatorio';
-import Registro from '../pages/Registro';
-import Login from '../pages/Login';
-import Dashboard from '../pages/Dashboard';
+import Agendamentos from '../pages/Agendamentos/agendamentos_page';
+import Cliente from '../pages/Clientes/cliente_page';
+import Servicos from '../pages/Servico/servico_page';
+import Relatorio from '../pages/Relatorio/relatorio_page';
+import Profissionais from '../pages/Profissionais/profissionais_page';
+import Horarios from '../pages/Horarios/horarios_page';
+import Registro from '../pages/Registro/registro_page';
+import Login from '../pages/Login/login_page';
+import Dashboard from '../pages/Dashboard/dashboard_page';
+import LinksManagement from '../pages/LinksManagement/links_page';
+import PublicScheduling from '../pages/PublicScheduling/public_page';
 
 import '../styles.css';
 
@@ -27,16 +31,23 @@ const Routers = () => {
       <Router>
         <Switch>
           {/* Rotas privadas com layout autenticado */}
-          <PrivateRoute path="/dashboard" exact component={Dashboard} />
           <PrivateRoute path="/agendamentos" exact component={Agendamentos} />
+          <PrivateRoute path="/dashboard" exact component={Dashboard} />
           <PrivateRoute path="/servico" exact component={Servicos} />
-          <PrivateRoute path="/relatorio" exact component={Relatorio} />        
+          <PrivateRoute path="/relatorio" exact component={Relatorio} />
+          <PrivateRoute path="/profissionais" exact component={Profissionais} />
+          <PrivateRoute path="/horarios" exact component={Horarios} />
           <PrivateRoute path="/cliente" exact component={Cliente} />
+          <PrivateRoute path="/links" exact component={LinksManagement} />
           
           {/* Rotas públicas */}
           <Route path="/registro" exact component={Registro} />
           <Route path="/login" exact component={Login} />
           <Route path="/" exact component={Login} />
+          
+          {/* Rotas públicas para agendamento via links personalizados */}
+          <Route path="/public/e/:customLink" component={PublicScheduling} />
+          <Route path="/public/p/:customLink" component={PublicScheduling} />
           
           {/* Rota de fallback */}
           <Route component={NotFound} />

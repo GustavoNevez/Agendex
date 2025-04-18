@@ -7,11 +7,12 @@ import {
   BarChart2, 
   Briefcase, 
   Home, 
-  X
+  X,
+  UserCog,
+  Link as LinkIcon
 } from "lucide-react";
 import { AuthContext } from "../../context/auth";
 import logo from "../../assets/teste.png";
-
 /**
  * Componente de barra lateral responsiva
  * 
@@ -22,7 +23,6 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
   const location = useLocation();
   // Estado para detectar se estamos em uma tela desktop
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
-
   // Fechar a barra lateral móvel apenas quando a rota muda, não quando o estado muda
   useEffect(() => {
     // Só fecha a sidebar se a navegação ocorreu e a sidebar está aberta
@@ -52,15 +52,21 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
 
   // Itens do menu principal com rotas corretas
   const menuItems = [
-    { 
-      icon: <Home size={20} />, 
-      text: "Dashboard", 
-      link: "/dashboard" 
-    },
+   
     { 
       icon: <Calendar size={20} />, 
       text: "Agendamentos", 
       link: "/agendamentos" 
+    },
+    { 
+      icon: <Briefcase size={20} />, 
+      text: "Serviços", 
+      link: "/servico" 
+    },
+    { 
+      icon: <UserCog size={20} />, 
+      text: "Profissionais", 
+      link: "/profissionais" 
     },
     { 
       icon: <Users size={20} />, 
@@ -68,14 +74,19 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
       link: "/cliente" 
     },
     { 
-      icon: <BarChart2 size={20} />, 
-      text: "Relatórios", 
-      link: "/relatorio" 
+      icon: <Calendar size={20} />, 
+      text: "Horários", 
+      link: "/horarios" 
     },
     { 
-      icon: <Briefcase size={20} />, 
-      text: "Serviços", 
-      link: "/servico" 
+      icon: <BarChart2 size={20} />, 
+      text: "Relatorios", 
+      link: "/dashboard" 
+    },
+    { 
+      icon: <LinkIcon size={20} />, 
+      text: "Links Personalizados", 
+      link: "/links" 
     }
   ];
 
@@ -97,7 +108,7 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
       >
         <div className="flex flex-col h-full">
           {/* Nome/Perfil no topo */}
-          <div className="p-4 mb-4">
+          <div className="p-2 mb-4">
             
           </div>
 
@@ -108,11 +119,12 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
                 <div key={index} className="mb-1">
                   <Link
                     to={item.link}
-                    className={`flex items-center py-2 px-3 rounded-md transition-colors duration-200 ${
+                    className={`flex items-center py-2 px-3 rounded-md transition-colors duration-200 no-underline text-white ${
                       isActive(item.link)
-                        ? "bg-blue-600 text-white"
-                        : "hover:bg-gray-700"
-                    }`}
+                        ? "bg-blue-600 text-white no-underline text-decoration-none border-b-0"
+                        : ""
+                    } hover:bg-gray-700 hover:no-underline hover:text-white`}
+                    style={{ textDecoration: 'none' }}
                   >
                     <span className="text-xl">{item.icon}</span>
                     {isOpen && <span className="ml-3">{item.text}</span>}
@@ -125,7 +137,7 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
                         <Link
                           key={subindex}
                           to={subitem.link}
-                          className={`flex items-center py-1.5 px-3 text-sm rounded-md transition-colors duration-200 ${
+                          className={`flex items-center py-1.5 px-3 text-sm rounded-md transition-colors duration-200 no-underline hover:no-underline hover:text-gray-300 ${
                             isActive(subitem.link)
                               ? "bg-gray-700 text-white"
                               : "text-gray-300 hover:bg-gray-700"
@@ -154,16 +166,19 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
         </aside>
       )}
 
-      {/* Mobile Sidebar - Aparece apenas quando ativada */}
-      {mobileSidebarOpen && (
+      {/* Mobile Sidebar - Sempre renderizado, mas com visibilidade controlada */}
+      {!isDesktop && (
         <>
           <div 
-            className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-[150]"
+            className={`md:hidden fixed inset-0 bg-black z-[150] transition-opacity duration-300 ease-in-out ${
+              mobileSidebarOpen ? 'opacity-50 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
             onClick={() => setMobileSidebarOpen(false)}
           />
           
           <aside
-            className="md:hidden fixed top-0 left-0 bottom-0 w-64 bg-gray-800 text-white z-[160]"
+            className="md:hidden fixed top-0 left-0 bottom-0 w-64 bg-gray-800 text-white z-[160] transition-transform duration-300 ease-in-out transform"
+            style={{ transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)' }}
           >
             <div className="flex flex-col h-full">
               {/* Cabeçalho com botão de fechar */}
@@ -171,7 +186,7 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
                 <img src={logo} alt="Logo" className="h-8" />
                 <button 
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400"
                 >
                   <X size={20} />
                 </button>
@@ -199,11 +214,13 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
                     <div key={index} className="mb-1">
                       <Link
                         to={item.link}
-                        className={`flex items-center py-2 px-3 rounded-md transition-colors duration-200 ${
+                        onClick={() => setMobileSidebarOpen(false)}
+                        className={`flex items-center py-2 px-3 rounded-md transition-colors duration-200 no-underline text-white ${
                           isActive(item.link)
-                            ? "bg-blue-600 text-white"
-                            : "hover:bg-gray-700"
-                        }`}
+                            ? "bg-blue-600 text-white no-underline text-decoration-none border-b-0"
+                            : ""
+                        } hover:bg-gray-700 hover:no-underline hover:text-white`}
+                        style={{ textDecoration: 'none' }}
                       >
                         <span className="text-xl">{item.icon}</span>
                         <span className="ml-3">{item.text}</span>
@@ -216,7 +233,8 @@ function ResponsiveSidebar({ isOpen, setIsOpen, mobileSidebarOpen, setMobileSide
                             <Link
                               key={subindex}
                               to={subitem.link}
-                              className={`flex items-center py-1.5 px-3 text-sm rounded-md transition-colors duration-200 ${
+                              onClick={() => setMobileSidebarOpen(false)}
+                              className={`flex items-center py-1.5 px-3 text-sm rounded-md transition-colors duration-200 no-underline hover:no-underline hover:text-gray-300 ${
                                 isActive(subitem.link)
                                   ? "bg-gray-700 text-white"
                                   : "text-gray-300 hover:bg-gray-700"

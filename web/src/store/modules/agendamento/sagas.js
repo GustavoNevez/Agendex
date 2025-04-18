@@ -1,7 +1,7 @@
 import { all, takeLatest, call, put } from 'redux-saga/effects';
 import api from '../../../services/api';
 import types from './types';
-import { updateAgendamento, updateServicos, updateDiasDisponiveis, updateClientes, deleteAgendamentoSuccess,finalizeAgendamentoSuccess } from './actions';
+import { updateAgendamento, updateServicos, updateDiasDisponiveis, updateClientes, updateProfissionais, deleteAgendamentoSuccess, finalizeAgendamentoSuccess } from './actions';
 import { showErrorToast, showSuccessToast } from '../../../utils/notifications';
 
 export function* filterAgendamento({ start, end }) {
@@ -77,7 +77,23 @@ export function* fetchDiasDisponiveis({ estabelecimentoId, data, servicoId }) {
         showErrorToast(err.message);
     }
 }
-
+export function* fetchDiasDisponiveisProfissional({ estabelecimentoId, data, servicoId, }) {
+    try {
+        const { data: response } = yield call(api.post, '/agendemanto/dias-disponiveis', {
+            estabelecimentoId,
+            data,
+            servicoId,
+            
+        });
+        if (response.error) {
+            showErrorToast(response.message);
+            return false;
+        }
+        yield put(updateDiasDisponiveis(response.agenda));
+    } catch (err) {
+        showErrorToast(err.message);
+    }
+}
 export function* saveAgendamento({ agendamento }) {
     try {
         const { data: response } = yield call(api.post, '/agendamento', agendamento);
@@ -120,11 +136,32 @@ export function* finalizeAgendamento({ id }) {
     }
 }
 
+export function* fetchProfissionais() {
+    try {
+        const storedUser = localStorage.getItem("@Auth:user");
+        const user = JSON.parse(storedUser);
+        const estabelecimentoId = user.id;
+        const { data: response } = yield call(api.get, `/profissional/estabelecimento/${estabelecimentoId}`);
+        if (response.error) {
+            showErrorToast(response.message);
+            return false;
+        }
+        // Assumindo que a resposta tem uma propriedade 'profissionais' com a lista de profissionais ativos
+        const profissionaisAtivos = response.profissionais.filter(profissional => profissional.status === 'A');
+        yield put(updateProfissionais(profissionaisAtivos));
+    } catch (err) {
+        showErrorToast(err.message);
+    }
+}
+
+
 export default all([
     takeLatest(types.FILTRO_AGENDAMENTOS, filterAgendamento),
     takeLatest(types.FETCH_SERVICOS, fetchServicos),
     takeLatest(types.FETCH_CLIENTES, fetchClientes),
+    takeLatest(types.FETCH_PROFISSIONAIS, fetchProfissionais),
     takeLatest(types.FETCH_DIAS_DISPONIVEIS, fetchDiasDisponiveis),
+    takeLatest(types.FETCH_DIAS_DISPONIVEIS_PROFISSIONAL, fetchDiasDisponiveisProfissional),
     takeLatest(types.SAVE_AGENDAMENTO, saveAgendamento),
     takeLatest(types.DELETE_AGENDAMENTO, deleteAgendamento),
     takeLatest(types.FINALIZE_AGENDAMENTO, finalizeAgendamento),
