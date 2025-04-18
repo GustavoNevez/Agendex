@@ -17,6 +17,11 @@ export const updateClientes = (clientes) => ({
     clientes,
 });
 
+export const updateProfissionais = (profissionais) => ({
+    type: types.UPDATE_PROFISSIONAIS,
+    profissionais,
+});
+
 export const filtroAgendamento = (start, end) => ({
     type: types.FILTRO_AGENDAMENTOS,
     start,
@@ -38,6 +43,17 @@ export const fetchDiasDisponiveis = (estabelecimentoId, data, servicoId) => ({
     servicoId,
 });
 
+export const fetchDiasDisponiveisProfissional = (estabelecimentoId, data, servicoId, profissionalId) => ({
+    type: types.FETCH_DIAS_DISPONIVEIS_PROFISSIONAL,
+    estabelecimentoId,
+    data,
+    servicoId,
+    profissionalId,
+});
+
+export const fetchProfissionais = () => ({
+    type: types.FETCH_PROFISSIONAIS,
+});
 export const updateDiasDisponiveis = (diasDisponiveis) => ({
     type: types.UPDATE_DIAS_DISPONIVEIS,
     diasDisponiveis,

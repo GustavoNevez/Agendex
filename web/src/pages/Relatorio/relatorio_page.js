@@ -40,7 +40,7 @@ const Relatorio = () => {
     };
 
     return (
-        <div className="relatorio-container col p-5 overflow-auto h-100">
+        <div className="relatorio-container col p-5 overflow-auto h-100" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
             <div className="row">
                 <div className="col-12">
                     <h2 className="mb-4 mt-0">Relatório de Agendamentos</h2>

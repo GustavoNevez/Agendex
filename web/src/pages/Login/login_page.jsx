@@ -25,7 +25,7 @@ export const Login = () => {
   };
 
   if (signed) {
-    return <Redirect to="/dashboard" />;
+    return <Redirect to="/agendamentos" />;
   }
 
   return (

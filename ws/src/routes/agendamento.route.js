@@ -7,33 +7,106 @@ const Cliente = require('../models/cliente');
 const Servico = require('../models/servico');
 const Horario = require('../models/horario');
 const Agendamento = require('../models/agendamento');
+const Profissional = require('../models/profissional');
 const _ = require('lodash');
 
 router.post('/', async (req, res) => {
     try {
-        const { servicoId } = req.body;
-        const servico = await Servico.findById(servicoId).select('duracao');
-
+        const { servicoId, profissionalId, data, estabelecimentoId } = req.body;
+       
+        // Verificar se o serviço existe
+        const servico = await Servico.findById(servicoId);
         if (!servico) {
             return res.json({ error: true, message: 'Serviço não encontrado' });
         }
-        const duracao = util.horaParaMinutos(moment(servico.duracao).format('HH:mm'));  
-        const agendamento = new Agendamento({
-            ...req.body,
-            duracao
+       
+        // Verificar se o profissional existe, está ativo e pertence ao estabelecimento
+        const profissional = await Profissional.findOne({
+            _id: profissionalId,
+            status: 'A',
+            estabelecimentoId: estabelecimentoId
         });
+       
+        if (!profissional) {
+            return res.json({ 
+                error: true, 
+                message: 'Profissional não encontrado, inativo ou não pertence a este estabelecimento' 
+            });
+        }
+       
+        // Verificar se o profissional oferece este serviço
+        const temServico = profissional.servicosId && 
+                          profissional.servicosId.some(id => id.toString() === servicoId.toString());
+        if (!temServico) {
+            return res.json({ error: true, message: 'Este profissional não oferece o serviço solicitado' });
+        }
+       
+        // Calcular a duração do serviço em minutos
+        const duracao = util.horaParaMinutos(moment(servico.duracao).format('HH:mm'));
+       
+        // Verificar se o profissional já está agendado neste horário
+        const dataInicio = moment(data);
+        const dataFim = moment(data).add(duracao, 'minutes');
+       
+        // Simplificar a verificação de conflitos
+        const agendamentosConflitantes = await Agendamento.find({
+            profissionalId,
+            status: 'A',
+            data: {
+                $lt: dataFim.toDate(),
+                $gt: moment(dataInicio).subtract(duracao, 'minutes').toDate()
+            }
+        });
+       
+        if (agendamentosConflitantes && agendamentosConflitantes.length > 0) {
+            return res.json({
+                error: true,
+                message: 'O profissional já possui um agendamento neste horário',
+                conflitos: agendamentosConflitantes
+            });
+        }
+       
+        // Se chegou até aqui, pode criar o agendamento
+        const agendamento = new Agendamento({
+            servicoId,
+            profissionalId,
+            estabelecimentoId,
+            data,
+            duracao,
+            status: 'A'
+        });
+        
         await agendamento.save();
         res.json({ error: false, agendamento });
     } catch (err) {
+        console.error(err);
         res.json({ error: true, message: err.message });
     }
 });
-
 router.post('/dias-disponiveis', async (req, res) => {
     try {
         const { data, estabelecimentoId, servicoId, clienteId } = req.body;
+        
+        // Verificar se o serviço existe
         const servico = await Servico.findById(servicoId).select('duracao');
-        const horarios = await Horario.find({ estabelecimentoId: '6665161912377535a22a708f' }); //Deixei esse horarioId fixo, pois vai ser usado apenas no aplicativo
+        if (!servico) {
+            return res.json({ error: true, message: 'Serviço não encontrado' });
+        }
+        
+        // Buscar horários do estabelecimento (sem filtrar por profissional)
+        const horarios = await Horario.find({ 
+            estabelecimentoId,
+            // Não filtramos por profissionalId aqui, pois queremos todos os horários do estabelecimento
+        });
+        
+        // Se não houver horários cadastrados, retornamos erro
+        if (horarios.length === 0) {
+            return res.json({ 
+                error: true, 
+                message: 'Não há horários cadastrados para este estabelecimento' 
+            });
+        }
+        console.log(horarios);
 
         let agenda = [];
         let ultimoDia = moment(data);
@@ -45,9 +118,11 @@ router.post('/dias-disponiveis', async (req, res) => {
             util.DURACAO_SERVICO, false
         ).length;
 
-        for (let i = 0; i <= 365 && agenda.length <= 7; i++) {
+        // Buscar dias disponíveis nos próximos 7 dias
+        for (let i = 0; i <= 30 && agenda.length <= 7; i++) {
+            const diaDaSemana = moment(ultimoDia).day();
             const partesValidos = horarios.filter((horario) => {
-                const diaSemanaDisponivel = horario.dias.includes(moment(ultimoDia).day());
+                const diaSemanaDisponivel = horario.dias.includes(diaDaSemana);
                 return diaSemanaDisponivel;
             });
 
@@ -65,6 +140,7 @@ router.post('/dias-disponiveis', async (req, res) => {
                     ];
                 }
 
+                // Buscar TODOS os agendamentos do estabelecimento para o dia (sem filtrar por profissional)
                 const agendamentos = await Agendamento.find({
                     estabelecimentoId,
                     status: 'A',
@@ -79,13 +155,15 @@ router.post('/dias-disponiveis', async (req, res) => {
                     final: moment(agendamento.data).add(agendamento.duracao, 'minutes'), 
                 }));
 
+                console.log(horariosOcupados);
+
                 horariosOcupados = horariosOcupados.map((horario) =>
                     util.partesMinutos(horario.inicio, horario.final, util.DURACAO_SERVICO)
                 ).flat();
 
                 let horariosLivres = util.splitByValue(horariosDoDia.map((horario) => {
                     return horariosOcupados.includes(horario) ? '-' : horario;
-                }), '-').filter(space => space.length > 0 );
+                }), '-').filter(space => space.length > 0);
 
                 horariosLivres = horariosLivres.filter((horario) => horario.length >= servicoPartes);
                            
@@ -93,15 +171,21 @@ router.post('/dias-disponiveis', async (req, res) => {
                     slot.filter(
                       (horario, index) => slot.length - index >= servicoPartes
                     )
-                  );
+                );
              
                 const horariosSeparados = _.flatten(horariosLivres).map(horario => [horario]);
-                agenda.push({ [ultimoDia.format('YYYY-MM-DD')]: horariosSeparados });
+                
+                // Adicionar à agenda apenas se houver horários disponíveis
+                if (horariosSeparados.length > 0) {
+                    agenda.push({ [ultimoDia.format('YYYY-MM-DD')]: horariosSeparados });
+                }
             }
             ultimoDia = moment(ultimoDia).add(1, 'day');
         }
+        
         res.json({ error: false, agenda });
     } catch (err) {
+        console.error('Erro ao buscar horários disponíveis do estabelecimento:', err);
         res.json({ error: true, message: err.message });
     }
 });

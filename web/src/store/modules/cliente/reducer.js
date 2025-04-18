@@ -9,7 +9,7 @@ const INITIAL_STATE = {
     },
     estadoFormulario:{
         filtereing:false,
-        disabled:true,
+        disabled:false,
         saving:false,
     },
     clientes: [],

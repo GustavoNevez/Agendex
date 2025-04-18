@@ -26,9 +26,15 @@ const port = process.env.PORT;
 app.use('/estabelecimento',authenticateMiddleware,require('./src/routes/estabelecimento.route'));
 app.use('/servico',authenticateMiddleware, require('./src/routes/servico.route'));
 app.use('/horario',authenticateMiddleware, require('./src/routes/horario.route'));
+app.use('/turno',authenticateMiddleware, require('./src/routes/turno.route'));
 app.use('/agendamento',authenticateMiddleware, require('./src/routes/agendamento.route'));
+app.use('/profissional',authenticateMiddleware, require('./src/routes/profissional.route'));
+
 app.use('/cliente',authenticateMiddleware, require('./src/routes/cliente.route'));
 app.use('/auth', require('./src/controllers/authController'));
+
+// Rotas públicas para links personalizáveis (sem autenticação)
+app.use('/public', require('./src/routes/public.route'));
 
 
 
