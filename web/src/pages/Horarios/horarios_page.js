@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { Toggle, Icon, Button, SelectPicker, DatePicker, Modal } from 'rsuite';
-import { fetchTurnos, updateTurno, saveTurno, deleteTurno, activateTurno, deactivateTurno } from '../../store/modules/turno/actions';
+import { Toggle, Icon, Button, SelectPicker, Modal } from 'rsuite';
 import { AuthContext } from '../../context/auth';
 import api from '../../services/api';
 import { showSuccessToast, showErrorToast } from '../../utils/notifications';
@@ -18,24 +16,19 @@ const daysOfWeek = [
   { label: 'Sábado', value: 6 }
 ];
 
+// Group days for common configurations
+const dayGroups = [
+  { label: 'Dias úteis (Segunda a Sexta)', values: [1, 2, 3, 4, 5] },
+  { label: 'Final de semana', values: [0, 6] },
+  { label: 'Todos os dias', values: [0, 1, 2, 3, 4, 5, 6] }
+];
+
 const Horarios = () => {
-  const dispatch = useDispatch();
   // Use AuthContext directly
   const { user } = useContext(AuthContext);
-  const { turnos = [] } = useSelector((state) => state.turno);
   const [loading, setLoading] = useState(false);
   const [savingDay, setSavingDay] = useState(null);
-  const [schedules, setSchedules] = useState([]);
   const [intervalMinutes] = useState(30); // Fixed 30 minute intervals as per requirement
-  
-  // Turnos management
-  const [showTurnoModal, setShowTurnoModal] = useState(false);
-  const [selectedTurno, setSelectedTurno] = useState(null);
-  const [turnoName, setTurnoName] = useState('');
-  const [turnoStartTime, setTurnoStartTime] = useState('08:00');
-  const [turnoEndTime, setTurnoEndTime] = useState('12:00');
-  const [turnoDays, setTurnoDays] = useState([]);
-  const [turnoStatus, setTurnoStatus] = useState('A');
   
   // Schedule state for each day
   const [daySchedules, setDaySchedules] = useState({
@@ -66,29 +59,77 @@ const Horarios = () => {
   
   const estabelecimentoId = getEstabelecimentoId();
 
-  // Handle toggle of a day's active status
-  const handleDayToggle = (day, enabled) => {
+  // Modal state for confirmations
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: '',
+    message: '',
+    action: null,
+    actionParams: null
+  });
+
+  // Function to show confirmation for day toggle with event handling
+  const confirmDayToggle = (day, enabled, event) => {
+    // Prevent any bubbling or default behavior
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    // Use setTimeout to ensure any toggle state changes complete first
+    setTimeout(() => {
+      const action = enabled ? 'ativar' : 'desativar';
+      
+      setConfirmModal({
+        show: true,
+        title: `Confirmar alteração`,
+        message: `Você tem certeza que deseja ${action} o dia ${getDayName(day)}?`,
+        action: applyDayToggle,
+        actionParams: [day, enabled]
+      });
+    }, 50);
+  };
+  
+  // Function to actually toggle day status after confirmation and save to database
+  const applyDayToggle = async (day, enabled) => {
+    // Update local state first
+    let timeSlots = [...daySchedules[day].timeSlots];
+    
+    // If enabling a day without time slots, add default ones
+    if (enabled && (!timeSlots || timeSlots.length === 0)) {
+      timeSlots = [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '17:00' }];
+    }
+    
+    // Apply change to local state
     setDaySchedules(prev => ({
       ...prev,
       [day]: {
         ...prev[day],
-        enabled
+        enabled,
+        timeSlots
       }
     }));
     
-    // If enabling a day without time slots, add default ones
-    if (enabled && (!daySchedules[day].timeSlots || daySchedules[day].timeSlots.length === 0)) {
+    // Save the change to the database (call the same function used by the save button)
+    try {
+      setSavingDay(day);
+      await saveScheduleForDays([day], enabled, timeSlots);
+      showSuccessToast(`Dia ${getDayName(day)} ${enabled ? 'ativado' : 'desativado'} com sucesso!`);
+    } catch (error) {
+      console.error(`Erro ao ${enabled ? 'ativar' : 'desativar'} o dia:`, error);
+      showErrorToast(`Não foi possível ${enabled ? 'ativar' : 'desativar'} o dia. Tente novamente.`);
+      
+      // Revert the UI state if the API call fails
       setDaySchedules(prev => ({
         ...prev,
         [day]: {
           ...prev[day],
-          timeSlots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '17:00' }]
+          enabled: !enabled // Revert to the opposite state
         }
       }));
+    } finally {
+      setSavingDay(null);
     }
-
-    // Save changes to API
-    saveScheduleForDay(day, enabled);
   };
 
   // Compare two time strings (HH:MM format)
@@ -124,6 +165,19 @@ const Horarios = () => {
   // Add a new time slot for a day
   const addTimeSlot = (day) => {
     setDaySchedules(prev => {
+      // Check if there are no time slots yet
+      if (!prev[day].timeSlots || prev[day].timeSlots.length === 0) {
+        // If no slots exist, create a default one
+        return {
+          ...prev,
+          [day]: {
+            ...prev[day],
+            timeSlots: [{ start: '08:00', end: '12:00' }]
+          }
+        };
+      }
+      
+      // Otherwise, add a slot after the last one
       const lastSlot = prev[day].timeSlots[prev[day].timeSlots.length - 1];
       const [hours, minutes] = lastSlot.end.split(':').map(Number);
       
@@ -143,26 +197,43 @@ const Horarios = () => {
       let newEndHours = newStartHours + 1;
       const newEndTime = `${String(newEndHours).padStart(2, '0')}:${String(newStartMinutes).padStart(2, '0')}`;
       
-      const newTimeSlots = [...prev[day].timeSlots, { start: newStart, end: newEndTime }];
       return {
         ...prev,
         [day]: {
           ...prev[day],
-          timeSlots: newTimeSlots
+          timeSlots: [...prev[day].timeSlots, { start: newStart, end: newEndTime }]
         }
       };
     });
+    
+    // Show toast but don't auto-save (user will save manually)
+    showSuccessToast('Novo turno adicionado! Clique em Salvar para confirmar.');
   };
 
-  // Remove a time slot from a day
-  const removeTimeSlot = (day, slotIndex) => {
+  // Ask for confirmation before removing a time slot
+  const confirmRemoveTimeSlot = (day, slotIndex) => {
     if (daySchedules[day].timeSlots.length <= 1) {
       showErrorToast('Não é possível remover o único horário disponível');
       return;
     }
     
+    const turnoNumero = slotIndex + 1;
+    
+    setConfirmModal({
+      show: true,
+      title: 'Remover Turno',
+      message: `Tem certeza que deseja remover o ${turnoNumero}º turno de ${getDayName(day)}?`,
+      action: removeTimeSlot,
+      actionParams: [day, slotIndex]
+    });
+  };
+  
+  // Actually remove the time slot after confirmation
+  const removeTimeSlot = (day, slotIndex) => {
+    let newTimeSlots = [];
+    
     setDaySchedules(prev => {
-      const newTimeSlots = prev[day].timeSlots.filter((_, index) => index !== slotIndex);
+      newTimeSlots = prev[day].timeSlots.filter((_, index) => index !== slotIndex);
       return {
         ...prev,
         [day]: {
@@ -173,107 +244,135 @@ const Horarios = () => {
     });
   };
 
-  // Save schedule for a specific day
-  const saveScheduleForDay = async (day, enabled) => {
+  // Function to show confirmation modal before saving schedule
+  const confirmSaveSchedule = (days, enabled, timeSlots) => {
+    const daysText = days.length > 1 
+      ? `${days.map(d => getDayName(d)).join(', ')}` 
+      : getDayName(days[0]);
+    
+    const action = enabled ? 'ativar' : 'desativar';
+    
+    setConfirmModal({
+      show: true,
+      title: `Confirmar alteração`,
+      message: `Você tem certeza que deseja ${action} os horários para ${daysText}?`,
+      action: saveScheduleForDays,
+      actionParams: [days, enabled, timeSlots]
+    });
+  };
+
+  // Function that actually saves the schedule after confirmation
+  const saveScheduleForDays = async (days, enabled, timeSlots) => {
     if (!estabelecimentoId) {
       showErrorToast('Você precisa estar logado para gerenciar horários');
       return;
     }
     
-    setSavingDay(day);
+    setSavingDay('multiple'); // Indicate we're saving multiple days
     
     try {
-      // Format the data for the API
-      const scheduleData = {
+      // Prepare the turno configuration data with ALL days' configurations
+      const turnoData = {
         estabelecimentoId,
-        dias: [day],
-        status: enabled ? 'A' : 'I'
+        turnos: {}
       };
       
-      // Add time slots if enabled
-      if (enabled && daySchedules[day].timeSlots && daySchedules[day].timeSlots.length > 0) {
-        // Delete any existing schedules for this day first
-        await deleteSchedulesForDay(day);
+      // First, add all existing day configurations to preserve them
+      for (let i = 0; i < 7; i++) {
+        // Skip days that are being updated (they'll be added next)
+        if (days.includes(i)) continue;
         
-        // Then create new schedules for each time slot
-        for (const slot of daySchedules[day].timeSlots) {
-          const slotData = {
-            ...scheduleData,
-            inicio: formatTimeToDate(slot.start),
-            fim: formatTimeToDate(slot.end)
-          };
-          
-          await api.post('/horario', slotData);
-        }
-        
-        showSuccessToast(`Horários de ${getDayName(day)} salvos com sucesso!`);
-      } else if (!enabled) {
-        // If day is disabled, just deactivate all schedules for this day
-        await deleteSchedulesForDay(day);
-        showSuccessToast(`Horários de ${getDayName(day)} desativados com sucesso!`);
+        turnoData.turnos[i] = {
+          ativo: daySchedules[i].enabled,
+          periodos: daySchedules[i].timeSlots.map(slot => ({
+            inicio: slot.start,
+            fim: slot.end,
+            ativo: true
+          }))
+        };
       }
       
-      // Update the schedules array directly instead of doing a full fetch
-      // This prevents other days from being affected when we toggle one day
-      if (!enabled) {
-        // Remove all schedules for this day from the schedules array
-        setSchedules(prevSchedules => 
-          prevSchedules.filter(schedule => !schedule.dias.includes(day))
-        );
+      // Now add the days being updated with their new configuration
+      days.forEach(day => {
+        turnoData.turnos[day] = {
+          ativo: enabled,
+          periodos: timeSlots.map(slot => ({
+            inicio: slot.start,
+            fim: slot.end,
+            ativo: true
+          }))
+        };
+      });
+      
+      // Use the configurar endpoint to update all days at once
+      await api.post('/turno/configurar', turnoData);
+      
+      const daysText = days.length > 1 
+        ? `${days.map(d => getDayName(d)).join(', ')}` 
+        : getDayName(days[0]);
+      
+      if (enabled) {
+        showSuccessToast(`Horários de ${daysText} salvos com sucesso!`);
       } else {
-        // We just created new schedules so we'll do a targeted fetch for just this day
-        try {
-          const response = await api.get(`/horario/estabelecimento/${estabelecimentoId}`);
-          if (response.data && response.data.horarios) {
-            // Find the newly created schedules for this day
-            const newSchedules = response.data.horarios.filter(schedule => 
-              schedule.status === 'A' && schedule.dias.includes(day)
-            );
-            
-            // Update the schedules array by removing old ones for this day and adding new ones
-            setSchedules(prevSchedules => {
-              const filteredSchedules = prevSchedules.filter(schedule => 
-                !(schedule.dias.includes(day) && schedule.status === 'A')
-              );
-              return [...filteredSchedules, ...newSchedules];
-            });
-          }
-        } catch (error) {
-          console.error(`Erro ao buscar horários atualizados para ${getDayName(day)}:`, error);
-          // If we fail to get the updated schedules, fall back to a full refresh
-          fetchSchedules();
-        }
+        showSuccessToast(`Horários de ${daysText} desativados com sucesso!`);
       }
+      
+      // Refresh the schedules to get the updated data
+      fetchSchedules();
     } catch (error) {
-      console.error(`Erro ao salvar horários para ${getDayName(day)}:`, error);
-      showErrorToast(`Não foi possível salvar os horários para ${getDayName(day)}`);
+      console.error('Erro ao salvar horários:', error);
+      showErrorToast('Não foi possível salvar os horários');
     } finally {
       setSavingDay(null);
     }
   };
 
-  // Delete all schedules for a specific day
-  const deleteSchedulesForDay = async (day) => {
-    const daySchedules = schedules.filter(schedule => schedule.dias.includes(day));
+  // Function to confirm saving a single day (maintains compatibility)
+  const confirmSaveScheduleForDay = (day, enabled) => {
+    confirmSaveSchedule([day], enabled, daySchedules[day].timeSlots);
+  };
+  
+  // Legacy function for direct saving (used internally after confirmation)
+  const saveScheduleForDay = async (day, enabled) => {
+    return saveScheduleForDays([day], enabled, daySchedules[day].timeSlots);
+  };
+  
+  // Function to find days with the same schedule
+  const findDaysWithSameSchedule = (dayToCompare) => {
+    const result = [];
+    const refConfig = daySchedules[dayToCompare];
     
-    for (const schedule of daySchedules) {
-      await api.delete(`/horario/${schedule._id}`);
+    if (!refConfig) return result;
+    
+    for (let i = 0; i < 7; i++) {
+      if (i === dayToCompare) continue; // Skip the reference day itself
+      
+      const currentConfig = daySchedules[i];
+      
+      if (currentConfig.enabled === refConfig.enabled && 
+          JSON.stringify(currentConfig.timeSlots) === JSON.stringify(refConfig.timeSlots)) {
+        result.push(i);
+      }
     }
+    
+    return result;
   };
-
-  // Format time string to Date object
-  const formatTimeToDate = (timeStr) => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    return date;
-  };
-
-  // Format Date object to time string
-  const formatDateToTime = (date) => {
-    if (!date) return '';
-    const d = new Date(date);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  
+  // Function to apply a day's schedule to other days
+  const applyScheduleToOtherDays = (sourceDay, targetDays) => {
+    const newSchedules = { ...daySchedules };
+    
+    // Apply the source day's configuration to all target days
+    targetDays.forEach(day => {
+      if (day !== sourceDay) {
+        newSchedules[day] = {
+          enabled: newSchedules[sourceDay].enabled,
+          timeSlots: [...newSchedules[sourceDay].timeSlots.map(slot => ({...slot}))]
+        };
+      }
+    });
+    
+    setDaySchedules(newSchedules);
   };
 
   // Get day name from day number
@@ -282,7 +381,7 @@ const Horarios = () => {
     return dayObj ? dayObj.label : `Dia ${day}`;
   };
 
-  // Fetch schedules from API
+  // Fetch schedules from API using new turno route
   const fetchSchedules = async () => {
     if (!estabelecimentoId) {
       showErrorToast('Não foi possível identificar o estabelecimento. Verifique se você está logado corretamente.');
@@ -291,61 +390,32 @@ const Horarios = () => {
     
     setLoading(true);
     try {
-      const response = await api.get(`/horario/estabelecimento/${estabelecimentoId}`);
+      const response = await api.get(`/turno/estabelecimento/${estabelecimentoId}`);
       
-      if (response.data && response.data.horarios) {
-        const fetchedSchedules = response.data.horarios;
-        setSchedules(fetchedSchedules);
+      if (response.data && !response.data.error) {
+        const turnosPorDia = response.data.turnos;
         
-        // Create a map to track which days have active schedules
-        const activeDays = {};
-        fetchedSchedules.forEach(schedule => {
-          if (schedule.status === 'A') {
-            schedule.dias.forEach(day => {
-              if (!activeDays[day]) {
-                activeDays[day] = [];
-              }
-              
-              activeDays[day].push({
-                start: formatDateToTime(schedule.inicio),
-                end: formatDateToTime(schedule.fim)
-              });
-            });
-          }
-        });
+        // Convert backend structure to our frontend format
+        const newDaySchedules = {};
         
-        // Update day schedules based on active days, but preserve current toggle state
-        // Only update the time slots for days with active schedules
-        const newDaySchedules = { ...daySchedules };
-        
-        // Process active days
-        Object.keys(activeDays).forEach(day => {
-          const dayNum = parseInt(day);
-          newDaySchedules[dayNum] = {
-            enabled: true, // If there are active schedules, the day should be enabled
-            timeSlots: activeDays[dayNum].sort((a, b) => a.start.localeCompare(b.start))
-          };
-        });
-        
-        // For days without active schedules in the database but were previously enabled,
-        // keep them enabled but with no time slots
         for (let i = 0; i < 7; i++) {
-          if (!activeDays[i] && daySchedules[i].enabled) {
-            // Preserve the day's enabled status but reset its time slots
+          if (turnosPorDia[i]) {
             newDaySchedules[i] = {
-              enabled: true,
-              timeSlots: [{ start: '08:00', end: '12:00' }, { start: '13:00', end: '17:00' }]
+              enabled: turnosPorDia[i].ativo,
+              timeSlots: turnosPorDia[i].periodos.map(periodo => ({
+                start: periodo.inicio,
+                end: periodo.fim,
+                ativo: periodo.ativo
+              }))
             };
-          } else if (!activeDays[i] && !newDaySchedules[i]) {
-            // If the day has no active schedules and wasn't in newDaySchedules yet,
-            // add it as disabled
+          } else {
+            // Default empty structure if no data
             newDaySchedules[i] = {
               enabled: false,
               timeSlots: []
             };
           }
         }
-        
         
         setDaySchedules(newDaySchedules);
       }
@@ -357,107 +427,12 @@ const Horarios = () => {
     }
   };
 
-  // Load schedules and turnos when component mounts
+  // Load schedules when component mounts
   useEffect(() => {
     if (estabelecimentoId) {
       fetchSchedules();
-      dispatch(fetchTurnos());
     }
-  }, [estabelecimentoId, dispatch]);
-  
-  // Open turno modal for create or edit
-  const handleOpenTurnoModal = (turno = null) => {
-    if (turno) {
-      // Edit existing turno
-      setSelectedTurno(turno);
-      setTurnoName(turno.nome);
-      
-      // Convert date strings to time strings
-      const startTime = new Date(turno.inicio);
-      const endTime = new Date(turno.fim);
-      setTurnoStartTime(`${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`);
-      setTurnoEndTime(`${String(endTime.getHours()).padStart(2, '0')}:${String(endTime.getMinutes()).padStart(2, '0')}`);
-      
-      setTurnoDays(turno.dias || []);
-      setTurnoStatus(turno.status || 'A');
-    } else {
-      // Create new turno
-      setSelectedTurno(null);
-      setTurnoName('');
-      setTurnoStartTime('08:00');
-      setTurnoEndTime('12:00');
-      setTurnoDays([1, 2, 3, 4, 5]); // Default to weekdays
-      setTurnoStatus('A');
-    }
-    setShowTurnoModal(true);
-  };
-
-  // Handle day selection in turno modal
-  const handleTurnoDayToggle = (day) => {
-    setTurnoDays(prevDays => {
-      if (prevDays.includes(day)) {
-        return prevDays.filter(d => d !== day);
-      } else {
-        return [...prevDays, day].sort();
-      }
-    });
-  };
-
-  // Save turno
-  const handleSaveTurno = () => {
-    // Convert time strings to date objects
-    const [startHours, startMinutes] = turnoStartTime.split(':').map(Number);
-    const [endHours, endMinutes] = turnoEndTime.split(':').map(Number);
-    
-    const startDate = new Date();
-    startDate.setHours(startHours, startMinutes, 0, 0);
-    
-    const endDate = new Date();
-    endDate.setHours(endHours, endMinutes, 0, 0);
-    
-    const turnoData = {
-      nome: turnoName,
-      dias: turnoDays,
-      inicio: startDate,
-      fim: endDate,
-      status: turnoStatus,
-      estabelecimentoId
-    };
-    
-    if (selectedTurno) {
-      // Update existing turno
-      dispatch(updateTurno({
-        ...turnoData,
-        _id: selectedTurno._id
-      }));
-    } else {
-      // Create new turno
-      dispatch(saveTurno(turnoData));
-    }
-    
-    setShowTurnoModal(false);
-    
-    // Refresh schedules after a delay to allow turno update to complete
-    setTimeout(() => {
-      fetchSchedules();
-    }, 500);
-  };
-
-  // Delete turno
-  const handleDeleteTurno = (turno) => {
-    if (window.confirm(`Tem certeza que deseja excluir o turno "${turno.nome}"?`)) {
-      dispatch(deleteTurno(turno._id));
-    }
-  };
-
-  // Toggle turno status
-  const handleToggleTurnoStatus = (turno) => {
-    if (turno.status === 'A') {
-      dispatch(deactivateTurno(turno._id));
-    } else {
-      dispatch(activateTurno(turno._id));
-    }
-  };
+  }, [estabelecimentoId]);
 
   // Debug logs
   useEffect(() => {
@@ -486,34 +461,66 @@ const Horarios = () => {
   const timeOptions = generateTimeOptions();
 
   return (
-    <div className="col p-4 overflow-auto h-100 " style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
-      <div className="row">
-        <div className="col-12">
-          <p className="mb-4 mt-0 text-2xl font-bold" >Horários de Atendimento</p>
+    <div className="col p-4 overflow-auto h-100   " style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+      <div className="row md:px-80">
+        <div className="col-12 ">
+         
+
+          {/* Schedule configuration card */}
+          <div className="card  mb-4 ">
+            <div className="card-body bg-white rounded-xl shadow-lg overflow-hidden   ">
+              
+            <p className="mb-4 mt-0 text-2xl font-bold" >Horários de Atendimento</p>
           <p className="text-muted mb-4 font-bold">
             Configure os dias e horários disponíveis para atendimento.
           </p>
-
-          {/* Schedule configuration card */}
-          <div className="card shadow-sm mb-4">
-            <div className="card-body">
-              {/* Interval information */}
-              <div className="mb-4 interval-info-container">
-                <div className="interval-info">
-                  <label className="mb-2 d-block">
-                    <div className="d-flex align-items-center">
-                      <span>Intervalo entre horários</span>
-                      <Icon icon="question-circle" className="ml-2" style={{ color: '#6c757d' }} />
-                    </div>
-                  </label>
-                  <div className="interval-value">
-                    <div className="interval-dropdown">
-                      <span>{intervalMinutes} minutos</span>
-                      <Icon icon="angle-down" className="ml-2" style={{ color: '#6c757d' }} />
-                    </div>
+              {/* Quick actions for day groups */}
+              {!loading && (
+                <div className="mb-4 day-groups-container">
+                  
+                  <div className="row">
+                    {dayGroups.map((group, idx) => (
+                      <div key={idx} className="col-md-4 mb-3">
+                        <div className="card h-100">
+                          <div className="card-body ">
+                            <h6 className="card-title">{group.label}</h6>
+                            <div className="d-flex mt-3">
+                              <Button
+                                appearance="primary"
+                                color="green"
+                                size="sm"
+                                onClick={() => {
+                                  // Create a template with default hours
+                                  const defaultTimeSlots = [
+                                    { start: '08:00', end: '12:00' },
+                                    { start: '13:00', end: '18:00' }
+                                  ];
+                                  // Show confirmation before applying to all days in group
+                                  confirmSaveSchedule(group.values, true, defaultTimeSlots);
+                                }}
+                                className="mr-2"
+                              >
+                                <Icon icon="check" /> Ativar
+                              </Button>
+                              <Button
+                                appearance="primary"
+                                color="red"
+                                size="sm"
+                                onClick={() => {
+                                  // Show confirmation before disabling all days in group
+                                  confirmSaveSchedule(group.values, false, []);
+                                }}
+                              >
+                                <Icon icon="close" /> Desativar
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Days of week schedule */}
               <div className="schedule-days-container">
@@ -523,185 +530,132 @@ const Horarios = () => {
                     <p className="mt-2">Carregando horários...</p>
                   </div>
                 ) : (
-                  daysOfWeek.map(day => (
-                    <div key={day.value} className="day-schedule-row">
-                      {/* Day name and toggle */}
-                      <div className="day-name-container">
-                        <div className="day-name">{day.label}</div>
-                        <Toggle 
-                          checked={daySchedules[day.value].enabled} 
-                          onChange={checked => handleDayToggle(day.value, checked)}
-                          disabled={savingDay === day.value}
-                          size="md"
-                        />
-                      </div>
+                  daysOfWeek.map(day => {
+                    // Find other days with the same schedule for showing shared info
+                    const sharedDays = findDaysWithSameSchedule(day.value);
+                    
+                    return (
+                      <div key={day.value} className="day-schedule-row">
+                        {/* Day name and toggle */}
+                        <div className="day-name-container">
+                          <div className="day-name">{day.label}</div>
+                          <Toggle 
+                            checked={daySchedules[day.value].enabled} 
+                            onChange={(checked, event) => confirmDayToggle(day.value, checked, event)}
+                            disabled={savingDay === day.value || savingDay === 'multiple'}
+                            size="md"
+                          />
+                        </div>
 
-                      {/* Time slots */}
-                      {daySchedules[day.value].enabled && (
-                        <div className="time-slots-container">
-                          {daySchedules[day.value].timeSlots.map((slot, index) => (
-                            <div key={index} className="mb-4">
-                              <div className="shift-label mb-2">
-                                {index + 1}º Turno
+                        {/* Time slots */}
+                        {daySchedules[day.value].enabled && (
+                          <div className="time-slots-container">
+                            {/* Show shared schedule info */}
+                            {sharedDays.length > 0 && (
+                              <div className="shared-schedule-info mb-3">
+                                <p className="text-info mb-2">
+                                  <Icon icon="link" /> Compartilha a mesma configuração com: {' '}
+                                  {sharedDays.map(d => getDayName(d)).join(', ')}
+                                </p>
                               </div>
-                              <div className="time-slot">
-                                <div className="time-inputs">
-                                  <SelectPicker 
-                                    data={timeOptions.filter(option => {
-                                      // If not the first slot, start time must be greater than previous slot's end time
-                                      if (index > 0) {
-                                        const prevSlot = daySchedules[day.value].timeSlots[index - 1];
-                                        return compareTime(option.value, prevSlot.end) >= 0 && 
-                                               compareTime(option.value, slot.end) < 0;
-                                      }
-                                      return compareTime(option.value, slot.end) < 0;
-                                    })} 
-                                    value={slot.start}
-                                    onChange={value => handleTimeChange(day.value, index, 'start', value)}
-                                    cleanable={false}
-                                    searchable={false}
-                                    placement="autoVerticalStart"
-                                    className="time-select"
-                                  />
-                                  <span className="time-separator">até</span>
-                                  <SelectPicker 
-                                    data={timeOptions.filter(option => {
-                                      // End time must be greater than current start time
-                                      // If not the last slot, end time must be less than next slot's start time
-                                      const isGreaterThanStart = compareTime(option.value, slot.start) > 0;
-                                      if (index < daySchedules[day.value].timeSlots.length - 1) {
-                                        const nextSlot = daySchedules[day.value].timeSlots[index + 1];
-                                        return isGreaterThanStart && compareTime(option.value, nextSlot.start) <= 0;
-                                      }
-                                      return isGreaterThanStart;
-                                    })} 
-                                    value={slot.end}
-                                    onChange={value => handleTimeChange(day.value, index, 'end', value)}
-                                    cleanable={false}
-                                    searchable={false}
-                                    placement="autoVerticalStart"
-                                    className="time-select"
-                                  />
-                                </div>
-                                <div className="time-actions">
-                                  <Button 
-                                    appearance="subtle" 
-                                    className="remove-slot-btn"
-                                    onClick={() => removeTimeSlot(day.value, index)}
-                                    disabled={daySchedules[day.value].timeSlots.length <= 1}
-                                  >
-                                    <Icon icon="trash" style={{ color: '#dc3545' }} />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                            )}
                           
-                          {/* Add time slot button */}
-                          <Button 
-                            appearance="ghost" 
-                            className="add-time-slot-btn" 
-                            onClick={() => addTimeSlot(day.value)}
-                            block
-                          >
-                            <Icon icon="plus" /> Adicionar Horário
-                          </Button>
-
-                          {/* Save button for this day */}
-                          <div className="mt-3">
-                            <Button
-                              appearance="primary"
-                              onClick={() => saveScheduleForDay(day.value, true)}
-                              disabled={savingDay === day.value}
+                            {daySchedules[day.value].timeSlots.map((slot, index) => (
+                              <div key={index} className="mb-4">
+                                <div className="shift-label mb-2">
+                                  {index + 1}º Turno
+                                </div>
+                                <div className="time-slot">
+                                  <div className="time-inputs">
+                                    <SelectPicker 
+                                      data={timeOptions.filter(option => {
+                                        // If not the first slot, start time must be greater than previous slot's end time
+                                        if (index > 0) {
+                                          const prevSlot = daySchedules[day.value].timeSlots[index - 1];
+                                          return compareTime(option.value, prevSlot.end) >= 0 && 
+                                                compareTime(option.value, slot.end) < 0;
+                                        }
+                                        return compareTime(option.value, slot.end) < 0;
+                                      })} 
+                                      value={slot.start}
+                                      onChange={value => handleTimeChange(day.value, index, 'start', value)}
+                                      cleanable={false}
+                                      searchable={false}
+                                      placement="autoVerticalStart"
+                                      className="time-select"
+                                    />
+                                    <span className="time-separator">até</span>
+                                    <SelectPicker 
+                                      data={timeOptions.filter(option => {
+                                        // End time must be greater than current start time
+                                        // If not the last slot, end time must be less than next slot's start time
+                                        const isGreaterThanStart = compareTime(option.value, slot.start) > 0;
+                                        if (index < daySchedules[day.value].timeSlots.length - 1) {
+                                          const nextSlot = daySchedules[day.value].timeSlots[index + 1];
+                                          return isGreaterThanStart && compareTime(option.value, nextSlot.start) <= 0;
+                                        }
+                                        return isGreaterThanStart;
+                                      })} 
+                                      value={slot.end}
+                                      onChange={value => handleTimeChange(day.value, index, 'end', value)}
+                                      cleanable={false}
+                                      searchable={false}
+                                      placement="autoVerticalStart"
+                                      className="time-select"
+                                    />
+                                  </div>
+                                  <div className="time-actions">
+                                    <Button 
+                                      appearance="subtle" 
+                                      className="remove-slot-btn"
+                                      onClick={() => confirmRemoveTimeSlot(day.value, index)}
+                                      disabled={daySchedules[day.value].timeSlots.length <= 1}
+                                    >
+                                      <Icon icon="trash" style={{ color: '#dc3545' }} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            
+                            {/* Add time slot button */}
+                            <Button 
+                              appearance="ghost" 
+                              className="add-time-slot-btn" 
+                              onClick={() => addTimeSlot(day.value)}
                               block
                             >
-                              {savingDay === day.value ? (
-                                <><Icon icon="spinner" spin /> Salvando...</>
-                              ) : (
-                                <><Icon icon="save" /> Salvar</>
-                              )}
+                              <Icon icon="plus" /> Adicionar Turno
                             </Button>
+
+                            {/* Save and apply buttons */}
+                            <div className="mt-3 d-flex">
+                              <Button
+                                appearance="primary"
+                                onClick={() => confirmSaveScheduleForDay(day.value, true)}
+                                disabled={savingDay === day.value || savingDay === 'multiple'}
+                                block
+                                className="mr-2"
+                              >
+                                {savingDay === day.value || savingDay === 'multiple' ? (
+                                  <><Icon icon="spinner" spin /> Salvando...</>
+                                ) : (
+                                  <><Icon icon="save" /> Salvar</>
+                                )}
+                              </Button>
+                              
+                              
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
           </div>
 
-          {/* Turnos Management Card */}
-          <div className="card shadow-sm mb-4 mt-4">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="card-title mb-0">Turnos de Trabalho</h5>
-                <Button appearance="primary" onClick={() => handleOpenTurnoModal()}>
-                  <Icon icon="plus" /> Novo Turno
-                </Button>
-              </div>
-              
-              {turnos.length === 0 ? (
-                <div className="text-center py-4">
-                  <Icon icon="calendar" style={{ fontSize: '2rem', color: '#6c757d' }} />
-                  <p className="mt-2 text-muted">Nenhum turno configurado. Crie um novo turno para definir os horários de funcionamento.</p>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Nome</th>
-                        <th>Horário</th>
-                        <th>Dias</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {turnos.map(turno => {
-                        const startDate = new Date(turno.inicio);
-                        const endDate = new Date(turno.fim);
-                        const timeStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')} - ${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
-                        
-                        // Get day names
-                        const dayNames = turno.dias.map(day => {
-                          const dayObj = daysOfWeek.find(d => d.value === day);
-                          return dayObj ? dayObj.label.substring(0, 3) : `Dia ${day}`;
-                        }).join(', ');
-                        
-                        return (
-                          <tr key={turno._id}>
-                            <td>{turno.nome}</td>
-                            <td>{timeStr}</td>
-                            <td>{dayNames}</td>
-                            <td>
-                              <span className={`badge ${turno.status === 'A' ? 'bg-success' : 'bg-secondary'}`}>
-                                {turno.status === 'A' ? 'Ativo' : 'Inativo'}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="btn-group">
-                                <Button appearance="link" onClick={() => handleOpenTurnoModal(turno)}>
-                                  <Icon icon="edit2" />
-                                </Button>
-                                <Button appearance="link" onClick={() => handleToggleTurnoStatus(turno)}>
-                                  {turno.status === 'A' ? <Icon icon="stop" style={{color: '#dc3545'}} /> : <Icon icon="play" style={{color: '#28a745'}} />}
-                                </Button>
-                                <Button appearance="link" onClick={() => handleDeleteTurno(turno)}>
-                                  <Icon icon="trash" style={{color: '#dc3545'}} />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Information card */}
           <div className="card mt-4">
@@ -733,89 +687,37 @@ const Horarios = () => {
         </div>
       )}
       
-      {/* Turno Modal */}
-      <Modal show={showTurnoModal} onHide={() => setShowTurnoModal(false)}>
+      {/* Confirmation Modal */}
+      <Modal
+        show={confirmModal.show}
+        onHide={() => setConfirmModal({ ...confirmModal, show: false })}
+        size="xs"
+        backdrop="static" // Prevent closing when clicking outside
+        keyboard={false} // Prevent closing with keyboard (escape key)
+      >
         <Modal.Header>
-          <Modal.Title>{selectedTurno ? 'Editar Turno' : 'Novo Turno'}</Modal.Title>
+          <Modal.Title>{confirmModal.title}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="form-group mb-3">
-            <label>Nome do Turno</label>
-            <input
-              type="text"
-              className="form-control"
-              value={turnoName}
-              onChange={(e) => setTurnoName(e.target.value)}
-              placeholder="Ex: Manhã (Seg-Sex)"
-            />
-          </div>
-          
-          <div className="row mb-3">
-            <div className="col-6">
-              <div className="form-group">
-                <label>Horário Início</label>
-                <SelectPicker
-                  data={timeOptions}
-                  value={turnoStartTime}
-                  onChange={setTurnoStartTime}
-                  cleanable={false}
-                  searchable={false}
-                  block
-                />
-              </div>
-            </div>
-            <div className="col-6">
-              <div className="form-group">
-                <label>Horário Fim</label>
-                <SelectPicker
-                  data={timeOptions.filter(t => compareTime(t.value, turnoStartTime) > 0)}
-                  value={turnoEndTime}
-                  onChange={setTurnoEndTime}
-                  cleanable={false}
-                  searchable={false}
-                  block
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div className="form-group mb-3">
-            <label>Dias da Semana</label>
-            <div className="days-checkboxes">
-              {daysOfWeek.map(day => (
-                <div key={day.value} className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    id={`day-${day.value}`}
-                    checked={turnoDays.includes(day.value)}
-                    onChange={() => handleTurnoDayToggle(day.value)}
-                  />
-                  <label className="form-check-label" htmlFor={`day-${day.value}`}>
-                    {day.label}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label>Status</label>
-            <div>
-              <Toggle
-                checked={turnoStatus === 'A'}
-                onChange={(checked) => setTurnoStatus(checked ? 'A' : 'I')}
-              />
-              <span className="ml-2">{turnoStatus === 'A' ? 'Ativo' : 'Inativo'}</span>
-            </div>
-          </div>
+          <p>{confirmModal.message}</p>
         </Modal.Body>
         <Modal.Footer>
-          <Button onClick={() => setShowTurnoModal(false)} appearance="subtle">
-            Cancelar
+          <Button
+            appearance="primary"
+            onClick={() => {
+              setConfirmModal({ ...confirmModal, show: false });
+              if (confirmModal.action && confirmModal.actionParams) {
+                confirmModal.action(...confirmModal.actionParams);
+              }
+            }}
+          >
+            Confirmar
           </Button>
-          <Button onClick={handleSaveTurno} appearance="primary" color="green">
-            Salvar
+          <Button
+            appearance="subtle"
+            onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+          >
+            Cancelar
           </Button>
         </Modal.Footer>
       </Modal>

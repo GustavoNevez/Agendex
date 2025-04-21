@@ -57,7 +57,7 @@ const Servicos = () => {
 
 
     return (
-        <div className="col p-4 overflow-auto h-100 " style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+        <div className="col p-4 overflow-auto h-100  " style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
             {/* Service drawer using our reusable CustomDrawer component */}
             <CustomDrawer
                 show={componentes.drawer}
@@ -94,8 +94,8 @@ const Servicos = () => {
                 loading={estadoFormulario.saving}
                 size="md"
             >
-                <div className="row mt-2">
-                    <div className="form-group col-md-6 col-sm-12 mb-3">
+                <div className="row mt-2 ">
+                    <div className="form-group col-md-6 col-sm-12 mb-3 ">
                         <b className="">Título</b>
                         <input
                             type="text"
