@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const moment = require('moment');
+const Turno = require('../models/turno');
 const util = require('../services/util');
 const Cliente = require('../models/cliente');
 const Servico = require('../models/servico');
@@ -93,24 +94,7 @@ router.post('/dias-disponiveis', async (req, res) => {
             return res.json({ error: true, message: 'Serviço não encontrado' });
         }
         
-        // Buscar horários do estabelecimento (sem filtrar por profissional)
-        const horarios = await Horario.find({ 
-            estabelecimentoId,
-            // Não filtramos por profissionalId aqui, pois queremos todos os horários do estabelecimento
-        });
-        
-        // Se não houver horários cadastrados, retornamos erro
-        if (horarios.length === 0) {
-            return res.json({ 
-                error: true, 
-                message: 'Não há horários cadastrados para este estabelecimento' 
-            });
-        }
-        console.log(horarios);
-
-        let agenda = [];
-        let ultimoDia = moment(data);
-
+        // Calcular duração do serviço em minutos
         const servicoDuracao = util.horaParaMinutos(moment(servico.duracao).format('HH:mm'));
         const servicoPartes = util.partesMinutos(
             moment(servico.duracao),
@@ -118,29 +102,48 @@ router.post('/dias-disponiveis', async (req, res) => {
             util.DURACAO_SERVICO, false
         ).length;
 
-        // Buscar dias disponíveis nos próximos 7 dias
-        for (let i = 0; i <= 30 && agenda.length <= 7; i++) {
-            const diaDaSemana = moment(ultimoDia).day();
-            const partesValidos = horarios.filter((horario) => {
-                const diaSemanaDisponivel = horario.dias.includes(diaDaSemana);
-                return diaSemanaDisponivel;
+        // Buscar a configuração de turno do estabelecimento (agora um único documento)
+        const turnoConfig = await Turno.findOne({ estabelecimentoId });
+        
+        // Se não houver configuração cadastrada, retornamos erro
+        if (!turnoConfig) {
+            return res.json({ 
+                error: true, 
+                message: 'Não há horários cadastrados para este estabelecimento' 
             });
+        }
 
-            if (partesValidos.length > 0) {
+     
+
+        let agenda = [];
+        let ultimoDia = moment(data);
+
+        // Buscar dias disponíveis nos próximos 30 dias (limite de 7 dias na agenda)
+        for (let i = 0; i <= 30 && agenda.length <= 7; i++) {
+            const diaDaSemana = moment(ultimoDia).day(); // 0 = Domingo, 6 = Sábado
+            
+            // Buscar configuração do dia da semana no Map 'dias'
+            const diaConfig = turnoConfig.dias.get(String(diaDaSemana));
+            
+            // Se existe configuração para este dia e está ativo
+            if (diaConfig && diaConfig.ativo && diaConfig.periodos && diaConfig.periodos.length > 0) {
                 let horariosDoDia = [];
 
-                for (let espaco of partesValidos) {
-                    horariosDoDia = [
-                        ...horariosDoDia,
-                        ...util.partesMinutos(
-                            util.horariosDoDia(ultimoDia, espaco.inicio),
-                            util.horariosDoDia(ultimoDia, espaco.fim),
-                            util.DURACAO_SERVICO
-                        )
-                    ];
+                // Mapear todos os períodos disponíveis para este dia
+                for (let periodo of diaConfig.periodos) {
+                    if (periodo.ativo) {
+                        horariosDoDia = [
+                            ...horariosDoDia,
+                            ...util.partesMinutos(
+                                util.horariosDoDia(ultimoDia, periodo.inicio),
+                                util.horariosDoDia(ultimoDia, periodo.fim),
+                                util.DURACAO_SERVICO
+                            )
+                        ];
+                    }
                 }
 
-                // Buscar TODOS os agendamentos do estabelecimento para o dia (sem filtrar por profissional)
+                // Buscar agendamentos existentes para este dia
                 const agendamentos = await Agendamento.find({
                     estabelecimentoId,
                     status: 'A',
@@ -148,23 +151,24 @@ router.post('/dias-disponiveis', async (req, res) => {
                         $gte: moment(ultimoDia).startOf('day'),
                         $lte: moment(ultimoDia).endOf('day'),
                     },
-                }).select('data duracao -_id'); 
+                }).select('data duracao -_id');
 
+                // Converter agendamentos para horários ocupados
                 let horariosOcupados = agendamentos.map((agendamento) => ({
                     inicio: moment(agendamento.data),
                     final: moment(agendamento.data).add(agendamento.duracao, 'minutes'), 
                 }));
 
-                console.log(horariosOcupados);
-
                 horariosOcupados = horariosOcupados.map((horario) =>
                     util.partesMinutos(horario.inicio, horario.final, util.DURACAO_SERVICO)
                 ).flat();
 
+                // Filtrar horários livres
                 let horariosLivres = util.splitByValue(horariosDoDia.map((horario) => {
                     return horariosOcupados.includes(horario) ? '-' : horario;
                 }), '-').filter(space => space.length > 0);
 
+                // Verificar se há slots suficientes para a duração do serviço
                 horariosLivres = horariosLivres.filter((horario) => horario.length >= servicoPartes);
                            
                 horariosLivres = horariosLivres.map((slot) =>

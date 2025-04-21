@@ -26,8 +26,10 @@ module.exports = {
     
 
     horariosDoDia: (data, hora) => {
-        const relacao = `${moment(data).format('YYYY-MM-DD')}T${moment(hora).format('HH-mm')}`;
-        return relacao
+        // Properly parse the time string using a specific format
+        // hora is expected to be in "HH:MM" format (e.g., "08:00")
+        const formattedDate = moment(data).format('YYYY-MM-DD');
+        return moment(`${formattedDate} ${hora}`, 'YYYY-MM-DD HH:mm');
     },
 
     splitByValue: (array, value) => {
