@@ -83,3 +83,13 @@ export const finalizeAgendamentoSuccess = (id) => ({
     type: types.FINALIZE_AGENDAMENTO_SUCCESS,
     id,
 });
+
+export const fetchProximosSeteDias = (estabelecimentoId) => ({
+    type: types.FETCH_PROXIMOS_SETE_DIAS,
+    estabelecimentoId,
+});
+
+export const updateAgendamentosSemana = (agendamentosSemana) => ({
+    type: types.UPDATE_AGENDAMENTOS_SEMANA,
+    agendamentosSemana,
+});

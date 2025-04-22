@@ -461,8 +461,8 @@ const Horarios = () => {
   const timeOptions = generateTimeOptions();
 
   return (
-    <div className="col p-4 overflow-auto h-100   " style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
-      <div className="row md:px-80">
+    <div className="col p-4 overflow-auto h-100" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+      <div className="row px-4 mx-auto" style={{ maxWidth: '800px' }}>
         <div className="col-12 ">
          
 

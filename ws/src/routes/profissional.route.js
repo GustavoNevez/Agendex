@@ -280,7 +280,13 @@ router.post('/dias-disponiveis', async (req, res) => {
                 for (let espaco of partesValidos) {
                     const inicio = util.horariosDoDia(ultimoDia, espaco.inicio);
                     const fim = util.horariosDoDia(ultimoDia, espaco.fim);
-                    const partes = util.partesMinutos(inicio, fim, util.DURACAO_SERVICO);
+                    
+                    // Calcular o último horário possível para iniciar o serviço
+                    // de modo que ele termine antes do fechamento do estabelecimento
+                    const ultimoHorarioPossivel = moment(fim).subtract(servicoDuracao, 'minutes');
+                    
+                    // Só gerar horários até o último horário possível
+                    const partes = util.partesMinutos(inicio, ultimoHorarioPossivel, util.DURACAO_SERVICO);
                     
                     horariosDoDia = [
                         ...horariosDoDia,

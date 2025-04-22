@@ -21,6 +21,7 @@ const INITIAL_STATE = {
     diasDisponiveis: [],
     clientes: [], // Lista de clientes
     profissionais: [], // Lista de profissionais
+    agendamentosSemana: [], // Lista de agendamentos dos próximos 7 dias
 };
 
 function agendamento(state = INITIAL_STATE, action) {
@@ -53,6 +54,11 @@ function agendamento(state = INITIAL_STATE, action) {
         case types.DELETE_AGENDAMENTO_SUCCESS: {
             return produce(state, (draft) => {
                 draft.agendamentos = draft.agendamentos.filter(agendamento => agendamento._id !== action.id);
+            });
+        }
+        case types.UPDATE_AGENDAMENTOS_SEMANA: {
+            return produce(state, (draft) => {
+                draft.agendamentosSemana = action.agendamentosSemana || [];
             });
         }
         default:
