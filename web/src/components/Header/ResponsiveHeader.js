@@ -5,6 +5,35 @@ import { useAgendamento } from '../../context/agendamentoContext';
 import logo from '../../assets/teste.png';
 import whiteLogo from '../../assets/Agendex-Branco.JPG';
 
+// Componente do botão hamburger animado - apenas para desktop
+const HamburgerButton = ({ isOpen, toggle, className = "" }) => {
+  return (
+    <button
+      onClick={toggle}
+      className={`flex flex-col justify-center items-center group p-2 rounded-md focus:outline-none ${className}`}
+      aria-label="Menu"
+    >
+      <div className="relative w-6 h-5">
+        <span
+          className={`absolute h-0.5 w-6 bg-gray-800 transform transition-all duration-300 ease-in-out ${
+            isOpen ? 'rotate-45 translate-y-2.5' : 'translate-y-0'
+          }`}
+        ></span>
+        <span
+          className={`absolute h-0.5 w-6 bg-gray-800 transform transition-all duration-300 ease-in-out ${
+            isOpen ? 'opacity-0' : 'opacity-100'
+          } top-2`}
+        ></span>
+        <span
+          className={`absolute h-0.5 w-6 bg-gray-800 transform transition-all duration-300 ease-in-out ${
+            isOpen ? '-rotate-45 translate-y-2.5' : 'translate-y-4'
+          }`}
+        ></span>
+      </div>
+    </button>
+  );
+};
+
 /**
  * Header responsivo simplificado
  * 
@@ -18,6 +47,7 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
 
   // Hook para detectar mudanças no tamanho da tela
   useEffect(() => {
@@ -28,6 +58,12 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Função para alternar o sidebar desktop
+  const handleToggleDesktopSidebar = () => {
+    setDesktopSidebarOpen(!desktopSidebarOpen);
+    toggleDesktopSidebar();
+  };
 
   // Função para lidar com o clique no botão Agendar
   const handleCreateClick = () => {
@@ -42,7 +78,7 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
       {/* Header Mobile - renderizado apenas em telas pequenas */}
       {!isDesktop && (
         <header className="flex items-center justify-between bg-white shadow-md p-2 w-full fixed top-0 left-0 right-0 z-[150]">
-          {/* Botão de menu para abrir o sidebar (à esquerda) */}
+          {/* Botão de menu para abrir o sidebar (à esquerda) - usa SVG original */}
           <button onClick={toggleMobileSidebar} className="text-gray-800 p-1">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -88,12 +124,15 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
         <header className="flex items-center justify-between bg-white shadow-md p-3 w-full fixed top-0 left-0 right-0 z-[150]">
           <div className="flex items-center">
             {/* Logo */}
-            <img src={whiteLogo} className="h-8 mr-20" alt="Logo" />
-            <button onClick={toggleDesktopSidebar} className="text-gray-800 p-1 mr-3">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            <img src={whiteLogo} className="h-8 mr-14" alt="Logo" />
+            {/* Botão de menu animado para desktop - posicionado mais à esquerda com área de clique maior */}
+            <div className="flex items-center justify-center">
+              <HamburgerButton 
+                isOpen={desktopSidebarOpen} 
+                toggle={handleToggleDesktopSidebar} 
+                className="hover:bg-gray-100 transition-colors mr-3 rounded-md cursor-pointer"
+              />
+            </div>
             {/* Barra de busca */}
             
           </div>

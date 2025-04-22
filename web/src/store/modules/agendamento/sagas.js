@@ -1,9 +1,29 @@
 import { all, takeLatest, call, put } from 'redux-saga/effects';
 import api from '../../../services/api';
 import types from './types';
-import { updateAgendamento, updateServicos, updateDiasDisponiveis, updateClientes, updateProfissionais, deleteAgendamentoSuccess, finalizeAgendamentoSuccess } from './actions';
+import { updateAgendamento, updateServicos, updateDiasDisponiveis, updateClientes, updateProfissionais, deleteAgendamentoSuccess, finalizeAgendamentoSuccess, updateAgendamentosSemana } from './actions';
 import { showErrorToast, showSuccessToast } from '../../../utils/notifications';
-
+export function* fetchProximosSeteDias({ estabelecimentoId }) {
+    try {
+        // Se não receber o estabelecimentoId como parâmetro, busca do localStorage
+        if (!estabelecimentoId) {
+            const storedUser = localStorage.getItem("@Auth:user");
+            const user = JSON.parse(storedUser);
+            estabelecimentoId = user.id;
+        }
+        
+        const { data: response } = yield call(api.get, `/agendamento/proximos-sete-dias/${estabelecimentoId}`);
+        
+        if (response.error) {
+            showErrorToast(response.message);
+            return false;
+        }
+        
+        yield put(updateAgendamentosSemana(response.agendamentos));
+    } catch (err) {
+        showErrorToast(err.message);
+    }
+}
 export function* filterAgendamento({ start, end }) {
     try {
         const storedUser = localStorage.getItem("@Auth:user");
@@ -61,12 +81,13 @@ export function* fetchClientes() {
     }
 }
 
-export function* fetchDiasDisponiveis({ estabelecimentoId, data, servicoId }) {
+export function* fetchDiasDisponiveis({ estabelecimentoId, data, servicoId, profissionalId }) {
     try {
         const { data: response } = yield call(api.post, '/agendamento/dias-disponiveis', {
             estabelecimentoId,
             data,
             servicoId,
+            profissionalId,
         });
         if (response.error) {
             showErrorToast(response.message);
@@ -77,12 +98,13 @@ export function* fetchDiasDisponiveis({ estabelecimentoId, data, servicoId }) {
         showErrorToast(err.message);
     }
 }
-export function* fetchDiasDisponiveisProfissional({ estabelecimentoId, data, servicoId, }) {
+export function* fetchDiasDisponiveisProfissional({ estabelecimentoId, data, servicoId, profissionalId }) {
     try {
-        const { data: response } = yield call(api.post, '/agendemanto/dias-disponiveis', {
+        const { data: response } = yield call(api.post, '/agendamento/dias-disponiveis', {
             estabelecimentoId,
             data,
             servicoId,
+            profissionalId,
             
         });
         if (response.error) {
@@ -165,4 +187,5 @@ export default all([
     takeLatest(types.SAVE_AGENDAMENTO, saveAgendamento),
     takeLatest(types.DELETE_AGENDAMENTO, deleteAgendamento),
     takeLatest(types.FINALIZE_AGENDAMENTO, finalizeAgendamento),
+    takeLatest(types.FETCH_PROXIMOS_SETE_DIAS, fetchProximosSeteDias),
 ]);

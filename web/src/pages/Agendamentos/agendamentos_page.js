@@ -12,7 +12,8 @@ import {
     saveAgendamento, 
     deleteAgendamento, 
     finalizeAgendamento, 
-    updateAgendamento 
+    updateAgendamento,
+    fetchProximosSeteDias
 } from '../../store/modules/agendamento/actions';
 import { fetchTurnos } from '../../store/modules/turno/actions';
 import { filterTimesByBusinessHours } from '../../utils/turnos';
@@ -26,7 +27,7 @@ import CustomDrawer from '../../components/CustomDrawer';
 
 const Agendamentos = () => {
     const dispatch = useDispatch();
-    const { agendamentos, servicos, diasDisponiveis, clientes, profissionais } = useSelector((state) => state.agendamento);
+    const { agendamentos, agendamentosSemana, servicos, diasDisponiveis, clientes, profissionais } = useSelector((state) => state.agendamento);
     const { turnos } = useSelector((state) => state.turno);
     const { isModalOpen, closeModal } = useAgendamento();
     const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -37,6 +38,13 @@ const Agendamentos = () => {
     const [selectedClient, setSelectedClient] = useState(null);
     const [selectedPrice, setSelectedPrice] = useState(null);
     const [selectedProfessional, setSelectedProfessional] = useState(null);
+    
+    // Loading states
+    const [isCalendarLoading, setIsCalendarLoading] = useState(true);
+    const [isAppointmentsLoading, setIsAppointmentsLoading] = useState(true);
+    const [isServicesLoading, setIsServicesLoading] = useState(true);
+    const [isClientsLoading, setIsClientsLoading] = useState(true);
+    const [isProfessionalsLoading, setIsProfessionalsLoading] = useState(true);
     const [availableTimes, setAvailableTimes] = useState([]);
     const [filteredProfessionals, setFilteredProfessionals] = useState([]);
     const [filteredServices, setFilteredServices] = useState([]);
@@ -45,7 +53,14 @@ const Agendamentos = () => {
     const [confirmFinalize, setConfirmFinalize] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(moment());
     const [view, setView] = useState("Diário");
-
+    // Fetch appointments for next 7 days when view is set to "Semanal"
+    useEffect(() => {
+        if (view === "Semanal") {
+            const storedUser = localStorage.getItem("@Auth:user");
+            const user = JSON.parse(storedUser);
+            dispatch(fetchProximosSeteDias(user.id));
+        }
+    }, [view, dispatch]);
     // Time zone adjustment helper functions
     const adjustTimeFromServer = (serverTime) => {
         // Subtract 3 hours to convert from server time (UTC-3) to local time
@@ -66,6 +81,11 @@ const Agendamentos = () => {
     }, [isModalOpen, closeModal]);
 
     useEffect(() => {
+        setIsServicesLoading(true);
+        setIsClientsLoading(true);
+        setIsProfessionalsLoading(true);
+        setIsAppointmentsLoading(true);
+        
         dispatch(fetchServicos());
         dispatch(fetchClientes());
         dispatch(fetchProfissionais());
@@ -75,6 +95,25 @@ const Agendamentos = () => {
             moment().endOf('month').format('YYYY-MM-DD')
         ));
     }, [dispatch]);
+    
+    // Update loading states when data is available
+    useEffect(() => {
+        if (servicos.length > 0) {
+            setIsServicesLoading(false);
+        }
+    }, [servicos]);
+
+    useEffect(() => {
+        if (clientes.length > 0) {
+            setIsClientsLoading(false);
+        }
+    }, [clientes]);
+
+    useEffect(() => {
+        if (profissionais.length > 0) {
+            setIsProfessionalsLoading(false);
+        }
+    }, [profissionais]);
 
     // Filtra os profissionais baseado no serviço selecionado
     useEffect(() => {
@@ -132,11 +171,10 @@ const Agendamentos = () => {
             setSelectedTime(null);
             setAvailableTimes([]);
             dispatch(fetchDiasDisponiveis(
-                    
                 user.id, 
                 moment(selectedDate).format('YYYY-MM-DD'), 
                 selectedService,
-                
+                selectedProfessional // Pass the selected professional ID
             ));
         }
     }, [selectedService, selectedDate, selectedProfessional, dispatch]);
@@ -180,10 +218,17 @@ const Agendamentos = () => {
                     // Log available times for debugging
                     console.log(`Day ${selectedDay}: ${processedTimes.length} available times`);
                     
-                    // The backend already filters out unavailable times through the 
-                    // /profissional/dias-disponiveis endpoint - the times returned are already validated
-                    const horariosFiltrados = filtrarHorariosDisponiveis(processedTimes, agendamentos);
-setAvailableTimes(horariosFiltrados);
+                    // First filter by conflicts with existing appointments
+                    const horariosSemConflito = filtrarHorariosDisponiveis(processedTimes, agendamentos);
+                    
+                    // Then filter by business hours (turnos)
+                    const horariosFiltrados = filterTimesByBusinessHours(
+                        horariosSemConflito, 
+                        selectedDate, 
+                        turnos
+                    );
+                    
+                    setAvailableTimes(horariosFiltrados);
                 } else {
                     // No times available for this day
                     console.log(`No available times for day ${selectedDay}`);
@@ -194,28 +239,38 @@ setAvailableTimes(horariosFiltrados);
                 setAvailableTimes([]);
             }
         }
-    }, [diasDisponiveis, selectedDate]);
+    }, [diasDisponiveis, selectedDate, turnos, agendamentos]);
 
     const filtrarHorariosDisponiveis = (horariosDisponiveis, agendamentosExistentes) => {
-        // First filter out times that conflict with existing appointments
-        const horariosSemConflito = horariosDisponiveis.filter(horario => {
-          const horarioMoment = moment(horario, 'HH:mm');
-          const horarioComData = moment(selectedDate).set({
-            hour: horarioMoment.hour(),
-            minute: horarioMoment.minute(),
-            second: 0,
-          });
-      
-          return !agendamentosExistentes.some(agendamento => {
-            const inicio = moment(agendamento.data);
-            const final = inicio.clone().add(agendamento.duracao, 'minutes');
-            return horarioComData.isBetween(inicio, final, undefined, '[)');
-          });
+        // Filter out times that conflict with existing appointments for the selected professional
+        return horariosDisponiveis.filter(horario => {
+            const horarioMoment = moment(horario, 'HH:mm');
+            const horarioComData = moment(selectedDate).set({
+                hour: horarioMoment.hour(),
+                minute: horarioMoment.minute(),
+                second: 0,
+            });
+            
+            // Only check appointments for the selected professional
+            const appointmentsForSelectedProfessional = selectedProfessional ? 
+                agendamentosExistentes.filter(agendamento => 
+                    (agendamento.profissionalId === selectedProfessional || 
+                    (typeof agendamento.profissionalId === 'object' && 
+                     agendamento.profissionalId.toString() === selectedProfessional))
+                ) : [];
+            
+            return !appointmentsForSelectedProfessional.some(agendamento => {
+                // Adjust for timezone difference when comparing
+                const inicio = adjustTimeFromServer(agendamento.data);
+                const final = inicio.clone().add(agendamento.duracao, 'minutes');
+                
+            // Check if the time slot is between start and end of an appointment
+            // Using closed interval '[]' to include the exact end time
+            // This allows appointments that end exactly at closing time to be valid
+            return horarioComData.isBetween(inicio, final, undefined, '[]');
+            });
         });
-        
-        // Return times without filtering by business hours (turnos)
-        return horariosSemConflito;
-      };
+    };
       
     
     // Debug: Log available days from diasDisponiveis whenever it changes
@@ -234,10 +289,20 @@ setAvailableTimes(horariosFiltrados);
     
     // Ensure appointments are refreshed whenever the current month changes
     useEffect(() => {
+        setIsAppointmentsLoading(true);
         const start = moment(currentMonth).startOf('month').format('YYYY-MM-DD');
         const end = moment(currentMonth).endOf('month').format('YYYY-MM-DD');
         dispatch(filtroAgendamento(start, end));
     }, [currentMonth, dispatch]);
+    
+    // Update appointments loading state when data is available
+    useEffect(() => {
+        if (agendamentos.length >= 0) {
+            // We use >= 0 because even empty array means loading is complete
+            setIsAppointmentsLoading(false);
+            setIsCalendarLoading(false);
+        }
+    }, [agendamentos]);
 
     const handleAddAppointment = () => {
         setSelectedAppointment(null);
@@ -402,6 +467,125 @@ setAvailableTimes(horariosFiltrados);
         dispatch(filtroAgendamento(start, end));
     };
 
+    // Custom skeleton loading CSS classes
+    const skeletonBaseStyle = "animate-pulse bg-gray-200 rounded";
+    
+    // Render skeleton loading for calendar
+    const renderCalendarSkeleton = () => {
+        return (
+            <div className="calendar-container pt-0 shadow-lg rounded-xl bg-white border border-gray-100 overflow-hidden" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+                <div className="calendar-header flex justify-between items-center bg-white p-4 border-b border-gray-100">
+                    <div className={`w-8 h-8 ${skeletonBaseStyle} rounded-full`}></div>
+                    <div className={`w-32 h-5 ${skeletonBaseStyle}`}></div>
+                    <div className={`w-8 h-8 ${skeletonBaseStyle} rounded-full`}></div>
+                </div>
+                <div className="p-2">
+                    <div className="mb-2">
+                        <div className={`w-full h-6 ${skeletonBaseStyle}`}></div>
+                    </div>
+                    {[...Array(6)].map((_, rowIndex) => (
+                        <div key={`calendar-skeleton-row-${rowIndex}`} className="flex justify-between mb-4">
+                            {[...Array(7)].map((_, colIndex) => (
+                                <div key={`calendar-skeleton-cell-${rowIndex}-${colIndex}`} className="w-8 mx-1">
+                                    <div className={`w-8 h-8 ${skeletonBaseStyle} rounded-full`}></div>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    // Render skeleton loading for time slots
+    const renderTimeSlotsSkeletons = () => {
+        return (
+            <div className="time-slots-container bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
+                <div className="sticky top-0 bg-white border-b border-gray-100 p-4">
+                    <div className="view-toggles flex mb-4 w-full ">
+                        <div className={`flex-1 h-9 ${skeletonBaseStyle} rounded-full mr-1`}></div>
+                        <div className={`flex-1 h-9 ${skeletonBaseStyle} rounded-full ml-1`}></div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <div className={`w-48 h-6 ${skeletonBaseStyle}`}></div>
+                    </div>
+                </div>
+                
+                <div className="time-slots p-4">
+                    <div className="space-y-4">
+                        {[...Array(5)].map((_, index) => (
+                            <div 
+                                key={`appointment-skeleton-${index}`}
+                                className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden"
+                            >
+                                <div className="flex items-center border-l-4 border-gray-200">
+                                    <div className="bg-gray-50 p-3 sm:p-4 flex flex-col items-center justify-center min-w-[60px] sm:min-w-[90px]">
+                                        <div className={`w-14 h-6 ${skeletonBaseStyle}`}></div>
+                                    </div>
+                                    
+                                    <div className="flex-1 p-4">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <div className={`w-20 h-5 ${skeletonBaseStyle} mb-2 rounded-full`}></div>
+                                                <div className={`w-32 h-6 ${skeletonBaseStyle}`}></div>
+                                            </div>
+                                            <div className={`w-6 h-6 ${skeletonBaseStyle} rounded-full`}></div>
+                                        </div>
+                                        
+                                        <div className="flex flex-col sm:grid sm:grid-cols-2 sm:gap-4 gap-2 mt-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-4 h-4 ${skeletonBaseStyle} rounded-full`}></div>
+                                                <div className={`w-36 h-4 ${skeletonBaseStyle}`}></div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-4 h-4 ${skeletonBaseStyle} rounded-full`}></div>
+                                                <div className={`w-36 h-4 ${skeletonBaseStyle}`}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+    
+    // Render skeleton loading for drawer fields
+    const renderDrawerFieldsSkeleton = () => {
+        return (
+            <div className="mt-3 space-y-3">
+                <div className="mb-3">
+                    <label className="block font-medium mb-1"><b>Serviços</b></label>
+                    <div className={`w-full h-10 ${skeletonBaseStyle}`}></div>
+                </div>
+                <div className="mb-3">
+                    <label className="block font-medium mb-1"><b>Profissionais</b></label>
+                    <div className={`w-full h-10 ${skeletonBaseStyle}`}></div>
+                </div>
+                <div className="mb-3">
+                    <label className="block font-medium mb-1"><b>Clientes</b></label>
+                    <div className={`w-full h-10 ${skeletonBaseStyle}`}></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="mb-3">
+                        <label className="block font-medium mb-1"><b>Data</b></label>
+                        <div className={`w-full h-10 ${skeletonBaseStyle}`}></div>
+                    </div>
+                    <div className="mb-3">
+                        <label className="block font-medium mb-1"><b>Horário</b></label>
+                        <div className={`w-full h-10 ${skeletonBaseStyle}`}></div>
+                    </div>
+                </div>
+
+                <div className="flex flex-col mt-4 space-y-2">
+                    <div className={`w-full h-10 ${skeletonBaseStyle}`}></div>
+                </div>
+            </div>
+        );
+    };
+
     const renderCalendar = () => {
         const monthStart = moment(currentMonth).startOf('month');
         const monthEnd = moment(currentMonth).endOf('month');
@@ -517,15 +701,17 @@ setAvailableTimes(horariosFiltrados);
         return (
             <div className="time-slots-container bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
                 <div className="sticky top-0 bg-white border-b border-gray-100 p-4">
-                <div className="view-toggles flex mb-4 w-full">
-    <button
-        className={`flex-1 px-3 md:px-5 py-2 text-sm font-medium rounded-l-full transition-all duration-200 ${
-            view === 'Diário'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
-        onClick={() => setView('Diário')}
-    >
+                <div className="view-toggles flex mb-4 w-full rounded-full border border-indigo-600 overflow-hidden ">
+
+                <button
+    className={`flex-1 px-3 md:px-5 py-2 text-sm font-medium rounded-l-full transition-all duration-200 ${
+        view === 'Diário'
+            ? 'bg-indigo-600 text-white shadow-sm'
+            : 'bg-indigo-100 text-indigo-700'
+    }`}
+    onClick={() => setView('Diário')}
+>
+
         <span className="flex items-center justify-center gap-1 md:gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -537,13 +723,13 @@ setAvailableTimes(horariosFiltrados);
         </span>
     </button>
     <button
-        className={`flex-1 px-3 md:px-5 py-2 text-sm font-medium rounded-r-full transition-all duration-200 ${
-            view === 'Semanal'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
-        onClick={() => setView('Semanal')}
-    >
+    className={`flex-1 px-3 md:px-5 py-2 text-sm font-medium rounded-r-full transition-all duration-200 ${
+        view === 'Semanal'
+            ? 'bg-indigo-600 text-white shadow-sm'
+            : 'bg-indigo-100 text-indigo-700'
+    }`}
+    onClick={() => setView('Semanal')}
+>
         <span className="flex items-center justify-center gap-1 md:gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -559,9 +745,6 @@ setAvailableTimes(horariosFiltrados);
                         <h3 className="font-bold text-lg text-gray-800">
                             {dateStr} - {date.format('dddd')}
                         </h3>
-                        <div className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-                            {selectedDate && moment(selectedDate).format('DD/MM/YYYY')}
-                        </div>
                     </div>
                 </div>
                 
@@ -581,34 +764,40 @@ setAvailableTimes(horariosFiltrados);
                         ) : (
                             <div className="space-y-4">
                                 {dayAppointments.map(appointment => {
-                                    // Extract service info
-                                    const service = appointment.servicoId && appointment.servicoId.length > 0 
-                                        ? appointment.servicoId[0] 
-                                        : { titulo: 'Serviço' };
+                                    // Use the simplified data structure if available, fall back to old structure if needed
+                                    const service = appointment.servico || 
+                                        (appointment.servicoId && appointment.servicoId.length > 0 
+                                            ? appointment.servicoId[0] 
+                                            : { titulo: 'Serviço' });
                                     
-                                    // Extract client info
-                                    const client = appointment.clienteId && appointment.clienteId.length > 0 
-                                        ? appointment.clienteId[0] 
-                                        : { nome: 'Cliente' };
+                                    const client = appointment.cliente || 
+                                        (appointment.clienteId && appointment.clienteId.length > 0 
+                                            ? appointment.clienteId[0] 
+                                            : { nome: 'Cliente' });
                                     
-                                    // Extract professional info - try to get the actual name from the API data or appointment
+                                    // Improved professional name lookup logic for daily view
                                     let professionalName = 'Profissional';
                                     
-                                    // If we have a professional ID in the appointment
-                                    if (appointment.profissionalId) {
-                                        // Try to find the professional in our professionals list
-                                        const foundProfessional = profissionais.find(p => p.id === appointment.profissionalId);
+                                    // Method 1: Get from profissional object if exists (used by weekly view)
+                                    if (appointment.profissional && appointment.profissional.nome) {
+                                        professionalName = appointment.profissional.nome;
+                                    } 
+                                    // Method 2: Direct lookup from the appointment if stored there
+                                    else if (appointment.profissionalNome) {
+                                        professionalName = appointment.profissionalNome;
+                                    } 
+                                    // Method 3: Find the professional from profissionais list using ID
+                                    // The daily view endpoint doesn't populate profissionalId, but we can use the raw ID
+                                    else if (appointment.profissionalId) {
+                                        // If profissionalId is a string ID, look it up in the profissionais array
+                                        const foundProfessional = profissionais.find(p => 
+                                            p.id === appointment.profissionalId || 
+                                            (typeof appointment.profissionalId === 'object' && p.id === appointment.profissionalId.toString())
+                                        );
+                                        
                                         if (foundProfessional && foundProfessional.nome) {
                                             professionalName = foundProfessional.nome;
                                         }
-                                        // If not found but appointment has a name
-                                        else if (appointment.profissionalNome) {
-                                            professionalName = appointment.profissionalNome;
-                                        }
-                                    }
-                                    // If no ID but we have a name directly in the appointment
-                                    else if (appointment.profissionalNome) {
-                                        professionalName = appointment.profissionalNome;
                                     }
                                     
                                     // Format appointment time
@@ -621,7 +810,7 @@ setAvailableTimes(horariosFiltrados);
                                             onClick={() => handleSelectEvent(appointment)}
                                         >
                                             <div className="flex items-center border-l-4 border-indigo-500">
-                                                <div className="bg-indigo-50 p-4 flex flex-col items-center justify-center min-w-[90px]">
+                                                <div className="bg-indigo-50 p-3 sm:p-4 flex flex-col items-center justify-center min-w-[60px] sm:min-w-[90px]">
                                                     <span className="text-xl font-bold text-indigo-700">{appointmentTime.format('HH:mm')}</span>
                                                 </div>
                                                 
@@ -642,25 +831,25 @@ setAvailableTimes(horariosFiltrados);
                                                         </button>
                                                     </div>
                                                     
-                                                    <div className="grid grid-cols-2 gap-4 mt-2">
+                                                    <div className="flex flex-col sm:grid sm:grid-cols-2 sm:gap-4 gap-2 mt-2">
                                                         <div className="flex items-center gap-2">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                                                 <circle cx="12" cy="7" r="4"></circle>
                                                             </svg>
-                                                            <p className="font-medium text-gray-700">
-                                                                {client.nome}
+                                                            <p className="font-medium text-gray-700 text-sm sm:text-base truncate">
+                                                                Cliente: <span className="font-semibold">{client.nome}</span>
                                                             </p>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                                 <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
                                                                 <path d="M12 3v4"></path>
                                                                 <path d="M8 7h8"></path>
                                                                 <circle cx="12" cy="11" r="2"></circle>
                                                             </svg>
-                                                            <p className="font-medium text-gray-700">
-                                                                {professionalName}
+                                                            <p className="font-medium text-gray-700 text-sm sm:text-base truncate">
+                                                                Profissional: <span className="font-semibold">{professionalName}</span>
                                                             </p>
                                                         </div>
                                                     </div>
@@ -674,71 +863,99 @@ setAvailableTimes(horariosFiltrados);
                     ) : (
                         // Weekly View
                         <div className="space-y-6">
-                            {[...Array(7)].map((_, index) => {
-                                const dayDate = moment().add(index, 'days');
-                                const dayStr = dayDate.format('DD/MM');
-                                const dayName = dayDate.format('dddd');
-                                const formattedDay = dayDate.format('YYYY-MM-DD');
-                                
-                                // Filter appointments for this day
-                                const appointmentsForDay = agendamentos.filter(a => {
-                                    const localAppointmentDate = adjustTimeFromServer(a.data);
-                                    return localAppointmentDate.format('YYYY-MM-DD') === formattedDay;
-                                });
-                                
-                                // Sort appointments by time
-                                appointmentsForDay.sort((a, b) => {
-                                    const timeA = adjustTimeFromServer(a.data);
-                                    const timeB = adjustTimeFromServer(b.data);
-                                    return timeA.diff(timeB);
-                                });
+                            {agendamentosSemana.length > 0 ? (
+                                // Group appointments by day
+                                Object.entries(agendamentosSemana.reduce((days, appointment) => {
+                                    const dayDate = moment(appointment.data).format('YYYY-MM-DD');
+                                    if (!days[dayDate]) days[dayDate] = [];
+                                    days[dayDate].push(appointment);
+                                    return days;
+                                }, {})).map(([dayDate, appointments]) => {
+                                    const dayMoment = moment(dayDate);
+                                    const dayStr = dayMoment.format('DD/MM');
+                                    const dayName = dayMoment.format('dddd');
+                                    const isToday = dayMoment.isSame(moment(), 'day');
+                                    
+                                    // Sort appointments by time
+                                    appointments.sort((a, b) => {
+                                        return moment(a.data).diff(moment(b.data));
+                                    });
                                 
                                 return (
-                                    <div key={`day-${index}`} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                                    <div key={`day-${dayDate}`} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                                         <div className="bg-gray-50 p-3 border-b border-gray-100">
                                             <div className="flex justify-between items-center">
                                                 <h3 className="font-bold text-gray-800">
                                                     {dayStr} - {dayName}
                                                 </h3>
                                                 <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                    index === 0 ? 'bg-blue-100 text-blue-800' : ''
+                                                    isToday ? 'bg-blue-100 text-blue-800' : ''
                                                 }`}>
-                                                    {index === 0 ? 'Hoje' : ''}
+                                                    {isToday ? 'Hoje' : ''}
                                                 </div>
                                             </div>
                                         </div>
                                         
                                         <div className="p-3">
-                                            {appointmentsForDay.length === 0 ? (
+                                            {appointments.length === 0 ? (
                                                 <div className="text-center py-4">
                                                     <p className="text-gray-500">Nenhum agendamento para esta data</p>
                                                 </div>
                                             ) : (
                                                 <div className="space-y-3">
-                                                    {appointmentsForDay.map(appointment => {
-                                                        const service = appointment.servicoId && appointment.servicoId.length > 0 
-                                                            ? appointment.servicoId[0] 
-                                                            : { titulo: 'Serviço' };
+                                                    {appointments.map(appointment => {
+                                                        // Use the simplified data structure provided by the backend
+                                                        const service = appointment.servico || { titulo: 'Serviço' };
+                                                        const client = appointment.cliente || { nome: 'Cliente' };
+                                                        const professionalName = appointment.profissional ? 
+                                                            appointment.profissional.nome : 'Profissional';
                                                         
-                                                        const client = appointment.clienteId && appointment.clienteId.length > 0 
-                                                            ? appointment.clienteId[0] 
-                                                            : { nome: 'Cliente' };
-                                                        
-                                                        const appointmentTime = adjustTimeFromServer(appointment.data);
+                                                        const appointmentTime = moment(appointment.data);
                                                         
                                                         return (
                                                             <div 
                                                                 key={appointment._id || `appointment-${appointmentTime.format('HH-mm')}`}
-                                                                className="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
+                                                                className="bg-white rounded-xl border border-gray-100 shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden cursor-pointer mb-3"
                                                                 onClick={() => handleSelectEvent(appointment)}
                                                             >
-                                                                <div className="bg-indigo-50 p-2 rounded-lg flex flex-col items-center justify-center min-w-[60px] mr-3">
-                                                                    <span className="font-bold text-indigo-700">{appointmentTime.format('HH:mm')}</span>
-                                                                </div>
-                                                                
-                                                                <div>
-                                                                    <h4 className="font-medium text-gray-800">{service.titulo}</h4>
-                                                                    <p className="text-sm text-gray-600">{client.nome}</p>
+                                                                <div className="flex items-center border-l-4 border-indigo-500">
+                                                                    <div className="bg-indigo-50 p-3 flex flex-col items-center justify-center min-w-[70px]">
+                                                                        <span className="text-lg font-bold text-indigo-700">{appointmentTime.format('HH:mm')}</span>
+                                                                    </div>
+                                                                    
+                                                                    <div className="flex-1 p-3">
+                                                                        <div className="flex justify-between items-start mb-1">
+                                                                            <div>
+                                                                                <span className="inline-block px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-full mb-1">
+                                                                                    Confirmado
+                                                                                </span>
+                                                                                <h3 className="font-bold text-gray-800">{service.titulo}</h3>
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                        <div className="flex flex-col sm:grid sm:grid-cols-2 sm:gap-2 gap-1 mt-1">
+                                                                            <div className="flex items-center gap-1">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                                                                    <circle cx="12" cy="7" r="4"></circle>
+                                                                                </svg>
+                                                                                <p className="font-medium text-gray-700 text-sm">
+                                                                                    Cliente: <span className="font-semibold">{client.nome}</span>
+                                                                                </p>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                                                                                    <path d="M12 3v4"></path>
+                                                                                    <path d="M8 7h8"></path>
+                                                                                    <circle cx="12" cy="11" r="2"></circle>
+                                                                                </svg>
+                                                                                <p className="font-medium text-gray-700 text-sm">
+                                                                                    Profissional: <span className="font-semibold">{professionalName}</span>
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         );
@@ -748,7 +965,18 @@ setAvailableTimes(horariosFiltrados);
                                         </div>
                                     </div>
                                 );
-                            })}
+                                })
+                            ) : (
+                                <div className="text-center p-8 bg-gray-50 rounded-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    <p className="mt-4 text-gray-500 font-medium">Nenhum agendamento para os próximos 7 dias</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -796,7 +1024,7 @@ setAvailableTimes(horariosFiltrados);
             {/* Calendar and Day View Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-20">
                 <div className="md:col-span-1 flex flex-col">
-                    {renderCalendar()}
+                    {isCalendarLoading ? renderCalendarSkeleton() : renderCalendar()}
                     <div className="mt-4" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
                         <Button 
                             appearance="primary" 
@@ -818,7 +1046,7 @@ setAvailableTimes(horariosFiltrados);
                     </div>
                 </div>
                 <div className="md:col-span-2">
-                    {renderTimeSlots()}
+                    {isAppointmentsLoading ? renderTimeSlotsSkeletons() : renderTimeSlots()}
                 </div>
             </div>
 
@@ -831,10 +1059,33 @@ setAvailableTimes(horariosFiltrados);
                 size="md"
             >
                 {selectedAppointment ? (
-                    <div className="mt-3 space-y-3">
+                    (isServicesLoading || isClientsLoading || isProfessionalsLoading) ? (
+                        renderDrawerFieldsSkeleton()
+                    ) : (
+                        <div className="mt-3 space-y-3">
                         <div className="mb-3">
-                            <label className="block font-medium mb-1"><b>Cliente/Serviço</b></label>
-                            <p>{selectedAppointment.title || `${selectedAppointment.clienteId && selectedAppointment.clienteId[0]?.nome} - ${selectedAppointment.servicoId && selectedAppointment.servicoId[0]?.titulo}`}</p>
+                            <label className="block font-medium mb-1"><b>Cliente</b></label>
+                            <p>{selectedAppointment.cliente?.nome || 
+                                (selectedAppointment.clienteId && selectedAppointment.clienteId[0]?.nome) || 
+                                clientes.find(c => c.id === selectedAppointment.clienteId)?.nome || 
+                                'Cliente não identificado'}</p>
+                        </div>
+                        <div className="mb-3">
+                            <label className="block font-medium mb-1"><b>Serviço</b></label>
+                            <p>{selectedAppointment.servico?.titulo || 
+                                (selectedAppointment.servicoId && selectedAppointment.servicoId[0]?.titulo) || 
+                                servicos.find(s => s.id === selectedAppointment.servicoId)?.titulo || 
+                                'Serviço não identificado'}</p>
+                        </div>
+                        <div className="mb-3">
+                            <label className="block font-medium mb-1"><b>Profissional</b></label>
+                            <p>{selectedAppointment.profissional?.nome || 
+                                selectedAppointment.profissionalNome || 
+                                (selectedAppointment.profissionalId && profissionais.find(p => 
+                                    p.id === selectedAppointment.profissionalId || 
+                                    (typeof selectedAppointment.profissionalId === 'object' && p.id === selectedAppointment.profissionalId.toString())
+                                )?.nome) || 
+                                'Profissional não identificado'}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="mb-3">
@@ -876,8 +1127,12 @@ setAvailableTimes(horariosFiltrados);
                             </Button>
                         </div>
                     </div>
+                    )
                 ) : (
-                    <div className="mt-3 space-y-3">
+                    (isServicesLoading || isClientsLoading || isProfessionalsLoading) ? (
+                        renderDrawerFieldsSkeleton()
+                    ) : (
+                        <div className="mt-3 space-y-3">
                         <div className="mb-3">
                             <label className="block font-medium mb-1"><b>Serviços</b></label>
                             <div className="relative w-full">
@@ -1022,6 +1277,7 @@ setAvailableTimes(horariosFiltrados);
                             </Button>
                         </div>
                     </div>
+                    )
                 )}
             </CustomDrawer>
 
