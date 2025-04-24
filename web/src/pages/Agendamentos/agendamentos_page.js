@@ -63,13 +63,15 @@ const Agendamentos = () => {
     }, [view, dispatch]);
     // Time zone adjustment helper functions
     const adjustTimeFromServer = (serverTime) => {
-        // Subtract 3 hours to convert from server time (UTC-3) to local time
-        return moment(serverTime).subtract(3, 'hours');
+        // Add 4 hours to convert from server time (US Western, approx. UTC-7) to Brazil time (UTC-3)
+        // The difference is approximately 4 hours (could be 4 or 5 depending on daylight saving time)
+        return moment(serverTime).add(3, 'hours');
     };
     
     const adjustTimeToServer = (localTime) => {
-        // Add 3 hours to convert from local time to server time (UTC-3)
-        return moment(localTime).add(3, 'hours');
+        // Subtract 4 hours to convert from Brazil time (UTC-3) to server time (US Western, approx. UTC-7)
+        // The difference is approximately 4 hours (could be 4 or 5 depending on daylight saving time)
+        return moment(localTime).subtract(3, 'hours');
     };
 
     // Escutar por mudanças no estado do modal no contexto
@@ -161,25 +163,39 @@ const Agendamentos = () => {
         }
     }, [selectedProfessional, servicos, profissionais, selectedService]);
 
-    // Fetch available days and times when service, date or professional changes
+    // Fetch available days and times when service, date AND professional changes
     useEffect(() => {
-        if (selectedService && selectedDate) {
-            const storedUser = localStorage.getItem("@Auth:user");
-            const user = JSON.parse(storedUser);
-            
-            // Reset selected time when any of these dependencies change
+            // Only fetch available times when all three are selected
+            if (selectedService && selectedDate && selectedProfessional) {
+                const storedUser = localStorage.getItem("@Auth:user");
+                const user = JSON.parse(storedUser);
+                
+                // Reset selected time when any of these dependencies change
+                setSelectedTime(null);
+                setAvailableTimes([]);
+                
+                console.log("Fetching available times with:", {
+                    estabelecimentoId: user.id,
+                    date: moment(selectedDate).format('YYYY-MM-DD'),
+                    servicoId: selectedService,
+                    profissionalId: selectedProfessional
+                });
+                
+                // Use fetchDiasDisponiveisProfissional when we have a professional ID
+                dispatch(fetchDiasDisponiveisProfissional(
+                    user.id, 
+                    moment(selectedDate).format('YYYY-MM-DD'), 
+                    selectedService,
+                    selectedProfessional
+                ));
+        } else if (!selectedProfessional) {
+            // Clear available times if no professional is selected
             setSelectedTime(null);
             setAvailableTimes([]);
-            dispatch(fetchDiasDisponiveis(
-                user.id, 
-                moment(selectedDate).format('YYYY-MM-DD'), 
-                selectedService,
-                selectedProfessional // Pass the selected professional ID
-            ));
         }
     }, [selectedService, selectedDate, selectedProfessional, dispatch]);
 
-    // Process available times from profissional/dias-disponiveis API
+    // Process available times from agendamento/horarios-disponiveis API
     useEffect(() => {
         if (selectedDate) {
             const selectedDay = moment(selectedDate).format('YYYY-MM-DD');
@@ -327,8 +343,12 @@ const Agendamentos = () => {
             // Create date from selected date and time
             const localDateTime = moment(`${moment(selectedDate).format('YYYY-MM-DD')}T${selectedTime}`);
             
-            // Adjust to server time (add 3 hours) before sending to the server
+            // Log for debugging timezone conversion
+            console.log('Local Brazil time (selected):', localDateTime.format('YYYY-MM-DD HH:mm'));
+            
+            // Adjust to server time (subtract 4 hours) before sending to the server
             const serverDateTime = adjustTimeToServer(localDateTime);
+            console.log('Converted to server time:', serverDateTime.format('YYYY-MM-DD HH:mm'));
             
             const agendamento = {
                 estabelecimentoId: user.id,

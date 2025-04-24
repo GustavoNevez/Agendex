@@ -85,193 +85,187 @@ router.post('/', async (req, res) => {
         res.json({ error: true, message: err.message });
     }
 });
-router.post('/dias-disponiveis', async (req, res) => {
+
+
+// Rota para buscar horários disponíveis com correção de fuso horário
+router.post('/horarios-disponiveis', async (req, res) => {
     try {
-        const { data, estabelecimentoId, servicoId, clienteId, profissionalId } = req.body;
-        console.log('1. Dados recebidos:', { data, estabelecimentoId, servicoId, clienteId, profissionalId });
+        const { data, estabelecimentoId, servicoId, profissionalId } = req.body;
         
-        // Verificar se o serviço existe
+        console.log('Dados recebidos:', req.body);
+
+        // Buscar informações do serviço
         const servico = await Servico.findById(servicoId).select('duracao');
         if (!servico) {
-            console.log('Serviço não encontrado');
+            console.log('Serviço não encontrado:', servicoId);
             return res.json({ error: true, message: 'Serviço não encontrado' });
         }
-        
-        console.log('2. Serviço encontrado:', servico);
-        
+        console.log('Informações do serviço:', servico);
+
         // Calcular duração do serviço em minutos
         const servicoDuracao = util.horaParaMinutos(moment(servico.duracao).format('HH:mm'));
-        console.log('3. Duração do serviço em minutos:', servicoDuracao);
+        console.log('Duração do serviço em minutos:', servicoDuracao);
         
-        const servicoPartes = util.partesMinutos(
-            moment(servico.duracao),
-            moment(servico.duracao).add(servicoDuracao, 'minutes'),
-            util.DURACAO_SERVICO, false
-        ).length;
-        console.log('4. Número de slots necessários para o serviço:', servicoPartes);
-
-        // Buscar a configuração de turno do estabelecimento
+        // Buscar configuração de turno para o estabelecimento
         const turnoConfig = await Turno.findOne({ estabelecimentoId });
-        
-        // Se não houver configuração cadastrada, retornamos erro
         if (!turnoConfig) {
-            console.log('Configuração de turno não encontrada');
+            console.log('Nenhuma configuração de turno encontrada para o estabelecimento:', estabelecimentoId);
             return res.json({ 
                 error: true, 
                 message: 'Não há horários cadastrados para este estabelecimento' 
             });
         }
+        console.log('Configuração de turno encontrada:', turnoConfig._id);
+
+        // Formatação da data recebida
+        const dataSelecionada = moment(data);
+        const diaDaSemana = dataSelecionada.day(); // 0-6 (domingo-sábado)
+        console.log(`Data selecionada: ${dataSelecionada.format('YYYY-MM-DD')}, Dia da semana: ${diaDaSemana}`);
         
-        console.log('5. Configuração de turno encontrada para o estabelecimento');
+        // Verificar se o dia está configurado e ativo
+        const diaConfig = turnoConfig.dias.get(String(diaDaSemana));
+        console.log('Configuração do dia:', diaConfig);
+        
+        if (!diaConfig || !diaConfig.ativo || !diaConfig.periodos || diaConfig.periodos.length === 0) {
+            console.log('Dia não configurado ou inativo');
+            return res.json({ 
+                error: false, 
+                horariosDisponiveis: [] 
+            });
+        }
 
-        let agenda = [];
-        let ultimoDia = moment(data);
-        console.log('6. Data inicial de busca:', ultimoDia.format('YYYY-MM-DD'));
+        // Coletar todos os horários disponíveis do dia baseado nos períodos ativos
+        let todosHorariosDoDia = [];
 
-        // Buscar dias disponíveis nos próximos 30 dias (limite de 7 dias na agenda)
-        for (let i = 0; i <= 30 && agenda.length <= 7; i++) {
-            const dataFormatada = ultimoDia.format('YYYY-MM-DD');
-            const diaDaSemana = moment(ultimoDia).day(); // 0 = Domingo, 6 = Sábado
+        console.log(`\n--- Processando períodos para ${dataSelecionada.format('YYYY-MM-DD')} ---`);
+        for (let i = 0; i < diaConfig.periodos.length; i++) {
+            const periodo = diaConfig.periodos[i];
+            console.log(`\nProcessando período ${i+1}:`, periodo);
             
-            // Buscar configuração do dia da semana no Map 'dias'
-            const diaConfig = turnoConfig.dias.get(String(diaDaSemana));
-            
-            // Se existe configuração para este dia e está ativo
-            if (diaConfig && diaConfig.ativo && diaConfig.periodos && diaConfig.periodos.length > 0) {
-                console.log(`\n7. Processando dia: ${dataFormatada} (${diaDaSemana})`);
+            if (periodo.ativo) {
+                // Converter o horário de início e fim para o formato de data completa
+                const inicioHorario = util.horariosDoDia(dataSelecionada, periodo.inicio);
+                const fimHorario = util.horariosDoDia(dataSelecionada, periodo.fim);
+                console.log(`Período ativo: ${periodo.inicio} até ${periodo.fim}`);
                 
-                let horariosDoDia = [];
-
-                // Mapear todos os períodos disponíveis para este dia
-                for (let periodo of diaConfig.periodos) {
-                    if (periodo.ativo) {
-                        const inicioHorarios = util.horariosDoDia(ultimoDia, periodo.inicio);
-                        const fimHorarios = util.horariosDoDia(ultimoDia, periodo.fim);
-                        const ultimoHorarioPossivel = moment(fimHorarios).subtract(servicoDuracao, 'minutes');
-                        
-                        const horariosPeriodo = util.partesMinutos(
-                            inicioHorarios,
-                            ultimoHorarioPossivel,
-                            util.DURACAO_SERVICO,
-                            true
-                        );
-                        
-                        horariosDoDia = [...horariosDoDia, ...horariosPeriodo];
-                    }
-                }
-                
-                console.log('8. Total de horários possíveis no dia:', horariosDoDia.length);
-
-                // Buscar agendamentos existentes para este dia
-                const query = {
-                    estabelecimentoId,
-                    status: 'A',
-                    data: {
-                        $gte: moment(ultimoDia).startOf('day'),
-                        $lte: moment(ultimoDia).endOf('day'),
-                    }
-                };
-                
-                if (profissionalId) {
-                    query.profissionalId = profissionalId;
-                }
-                
-                const agendamentos = await Agendamento.find(query).select('data duracao -_id');
-                console.log('9. Agendamentos encontrados:', agendamentos.length);
-                
-                // Log de cada agendamento - sem entrar em loop
-                if (agendamentos.length > 0) {
-                    const resumoAgendamentos = agendamentos.map(a => ({
-                        horario: moment(a.data).format('HH:mm'),
-                        duracao: a.duracao,
-                        fim: moment(a.data).add(a.duracao, 'minutes').format('HH:mm')
-                    }));
-                    console.log('10. Detalhes dos agendamentos:', resumoAgendamentos);
-                }
-
-                // Converter agendamentos para horários ocupados
-                let horariosOcupados = agendamentos.map((agendamento) => ({
-                    inicio: moment(agendamento.data),
-                    final: moment(agendamento.data).add(agendamento.duracao, 'minutes'), 
-                }));
-
-                const horariosOcupadosExpanded = horariosOcupados.map((horario) =>
-                    util.partesMinutos(horario.inicio, horario.final, util.DURACAO_SERVICO)
-                ).flat();
-                
-                console.log('11. Total de slots ocupados:', horariosOcupadosExpanded.length);
-
-                // Filtrar horários livres
-                let horariosLivres = util.splitByValue(horariosDoDia.map((horario) => {
-                    return horariosOcupadosExpanded.includes(horario) ? '-' : horario;
-                }), '-').filter(space => space.length > 0);
-                
-                console.log('12. Grupos de horários livres encontrados:', horariosLivres.length);
-                
-                // Resumo dos grupos de horários livres
-                const resumoGrupos = horariosLivres.map(grupo => ({
-                    tamanho: grupo.length,
-                    inicio: moment(grupo[0]).format('HH:mm'),
-                    fim: moment(grupo[grupo.length - 1]).format('HH:mm'),
-                    suficiente: grupo.length >= servicoPartes ? 'Sim' : 'Não'
-                }));
-                console.log('13. Resumo dos grupos livres:', resumoGrupos);
-
-                // Verificar se há slots suficientes para a duração do serviço
-                horariosLivres = horariosLivres.filter((horario) => horario.length >= servicoPartes);
-                console.log('14. Grupos com tamanho suficiente:', horariosLivres.length);
-                           
-                // Filtrar para horários iniciais válidos
-                horariosLivres = horariosLivres.map((slot) =>
-                    slot.filter(
-                        (horario, index) => slot.length - index >= servicoPartes
-                    )
+                // Gerar slots de horários para o período
+                const slotsHorarios = util.partesMinutos(
+                    inicioHorario,
+                    fimHorario,
+                    util.DURACAO_SERVICO
                 );
+                console.log('Todos os slots do período:', slotsHorarios);
                 
-                // Teste de conflito para cada horário inicial considerado válido
-                const todosFlatSlots = _.flatten(horariosLivres);
-                console.log('15. Total de horários iniciais considerados válidos:', todosFlatSlots.length);
-                
-                // Verificar se cada horário inicial pode acomodar o serviço sem conflitos
-                const conflitos = todosFlatSlots.filter(horarioInicial => {
-                    // Verificar se todos os slots necessários para este horário estão realmente livres
-                    for (let j = 0; j < servicoPartes; j++) {
-                        const horarioSlot = moment(horarioInicial).add(j * util.DURACAO_SERVICO, 'minutes');
-                        if (horariosOcupadosExpanded.some(ocupado => 
-                            moment(ocupado).isSame(horarioSlot)
-                        )) {
-                            return true; // Encontrou conflito
-                        }
+                // Filtrar somente horários onde o serviço pode ser concluído dentro do período
+                const horariosValidos = slotsHorarios.filter(horarioStr => {
+                    const horarioInicio = moment(`${dataSelecionada.format('YYYY-MM-DD')} ${horarioStr}`, 'YYYY-MM-DD HH:mm');
+                    const horarioFimServico = horarioInicio.clone().add(servicoDuracao, 'minutes');
+                    
+                    // O serviço deve terminar antes ou exatamente no horário de fim do período
+                    const isValido = horarioFimServico.isSameOrBefore(fimHorario);
+                    if (!isValido) {
+                        console.log(`Horário ${horarioStr} inválido: serviço terminaria às ${horarioFimServico.format('HH:mm')}, após o fim do período (${periodo.fim})`);
                     }
-                    return false; // Não há conflitos
+                    return isValido;
                 });
                 
-                if (conflitos.length > 0) {
-                    console.log('⚠️ ALERTA: Encontrados ' + conflitos.length + ' horários com possíveis conflitos!');
-                    console.log('Exemplos de conflitos:', conflitos.slice(0, 3).map(h => moment(h).format('HH:mm')));
-                }
-             
-                const horariosSeparados = _.flatten(horariosLivres).map(horario => [horario]);
+                console.log('Horários válidos neste período:', horariosValidos);
+                todosHorariosDoDia = [...todosHorariosDoDia, ...horariosValidos];
+            } else {
+                console.log('Período inativo, ignorando');
+            }
+        }
+
+        console.log('\nTodos horários disponíveis antes de verificar agendamentos:', todosHorariosDoDia);
+
+        // Buscar agendamentos existentes para o dia selecionado
+        const query = {
+            estabelecimentoId,
+            status: 'A',
+            data: {
+                $gte: moment(dataSelecionada).startOf('day'),
+                $lte: moment(dataSelecionada).endOf('day'),
+            }
+        };
+
+        // Filtrar por profissional se especificado
+        if (profissionalId) {
+            query.profissionalId = profissionalId;
+            console.log('Filtrando por profissional:', profissionalId);
+        }
+
+        console.log('Query de busca de agendamentos:', query);
+        const agendamentos = await Agendamento.find(query).select('data duracao profissionalId');
+        console.log('Agendamentos encontrados:', agendamentos.length);
+        console.log('Detalhes dos agendamentos:', agendamentos.map(a => ({
+            id: a._id,
+            data: moment(a.data).format('YYYY-MM-DD HH:mm'),
+            duracao: a.duracao,
+            profissionalId: a.profissionalId
+        })));
+
+        // Calcular horários ocupados considerando a duração de cada agendamento
+        // E fazendo a correção do fuso horário
+        let horariosOcupados = [];
+        
+        for (const agendamento of agendamentos) {
+            // Agora aplicamos a correção do fuso horário (UTC+3)
+            const inicioAgendamento = moment(agendamento.data).add(3, 'hours');
+            const fimAgendamento = inicioAgendamento.clone().add(agendamento.duracao, 'minutes');
+            
+            console.log(`\nProcessando agendamento: início ${inicioAgendamento.format('HH:mm')}, fim ${fimAgendamento.format('HH:mm')}`);
+            console.log(`(Horário original no banco: ${moment(agendamento.data).format('HH:mm')})`);
+            
+            // Gerar todos os slots de tempo ocupados por este agendamento
+            const slotsOcupados = util.partesMinutos(
+                inicioAgendamento,
+                fimAgendamento,
+                util.DURACAO_SERVICO
+            );
+            
+            console.log('Slots ocupados por este agendamento:', slotsOcupados);
+            horariosOcupados = [...horariosOcupados, ...slotsOcupados];
+        }
+
+        // Remover horários duplicados dos ocupados (caso haja sobreposição)
+        const horariosOcupadosUnicos = [...new Set(horariosOcupados)];
+        console.log('\nTodos os horários ocupados (únicos):', horariosOcupadosUnicos);
+
+        // Calcular quantos slots o serviço ocupa
+        const partesDuracao = Math.ceil(servicoDuracao / util.DURACAO_SERVICO);
+        console.log(`\nO serviço ocupa ${partesDuracao} slots de ${util.DURACAO_SERVICO} minutos`);
+
+        // Verificar quais horários estão realmente disponíveis considerando a duração do serviço
+        const horariosDisponiveis = todosHorariosDoDia.filter(horarioInicio => {
+            // Verificar se este horário de início permite que o serviço seja concluído
+            // sem conflitar com outros agendamentos
+            const momentInicio = moment(`${dataSelecionada.format('YYYY-MM-DD')} ${horarioInicio}`, 'YYYY-MM-DD HH:mm');
+            
+            // Verificar se algum dos slots necessários já está ocupado
+            for (let i = 0; i < partesDuracao; i++) {
+                const momentSlot = momentInicio.clone().add(i * util.DURACAO_SERVICO, 'minutes');
+                const slotStr = momentSlot.format('HH:mm');
                 
-                // Adicionar à agenda apenas se houver horários disponíveis
-                if (horariosSeparados.length > 0) {
-                    console.log('16. Horários finais disponíveis:', horariosSeparados.length);
-                    console.log('Exemplos:', horariosSeparados.slice(0, 5).map(h => moment(h[0]).format('HH:mm')));
-                    
-                    agenda.push({ [ultimoDia.format('YYYY-MM-DD')]: horariosSeparados });
-                } else {
-                    console.log('16. Nenhum horário disponível para este dia');
+                if (horariosOcupadosUnicos.includes(slotStr)) {
+                    console.log(`Horário ${horarioInicio} indisponível: slot ${slotStr} já está ocupado`);
+                    return false; // Este horário não está disponível
                 }
             }
             
-            ultimoDia = moment(ultimoDia).add(1, 'day');
-        }
+            return true; // O horário está disponível para o serviço completo
+        });
+
+        console.log('\nHorários disponíveis após verificação de conflitos:', horariosDisponiveis);
+        console.log(`Total de ${horariosDisponiveis.length} horários disponíveis para o dia ${dataSelecionada.format('YYYY-MM-DD')}`);
+
+        res.json({ 
+            error: false, 
+            horariosDisponiveis,
+            data: dataSelecionada.format('YYYY-MM-DD')
+        });
         
-        console.log('\n17. RESULTADO FINAL: ' + agenda.length + ' dias na agenda');
-        
-        res.json({ error: false, agenda });
     } catch (err) {
-        console.error('Erro ao buscar horários disponíveis do estabelecimento:', err);
+        console.error('Erro ao buscar horários disponíveis:', err);
         res.json({ error: true, message: err.message });
     }
 });
