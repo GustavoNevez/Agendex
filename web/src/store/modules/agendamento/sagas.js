@@ -83,7 +83,7 @@ export function* fetchClientes() {
 
 export function* fetchDiasDisponiveis({ estabelecimentoId, data, servicoId, profissionalId }) {
     try {
-        const { data: response } = yield call(api.post, '/agendamento/dias-disponiveis', {
+        const { data: response } = yield call(api.post, '/agendamento/horarios-disponiveis', {
             estabelecimentoId,
             data,
             servicoId,
@@ -93,25 +93,40 @@ export function* fetchDiasDisponiveis({ estabelecimentoId, data, servicoId, prof
             showErrorToast(response.message);
             return false;
         }
-        yield put(updateDiasDisponiveis(response.agenda));
+        
+        // Transform the response from the new endpoint format to the expected format
+        // Convert flat array of times to the format expected by the component
+        const formattedTimes = response.horariosDisponiveis.map(time => [time]);
+        const formattedAgenda = [{
+            [response.data]: formattedTimes
+        }];
+        
+        yield put(updateDiasDisponiveis(formattedAgenda));
     } catch (err) {
         showErrorToast(err.message);
     }
 }
 export function* fetchDiasDisponiveisProfissional({ estabelecimentoId, data, servicoId, profissionalId }) {
     try {
-        const { data: response } = yield call(api.post, '/agendamento/dias-disponiveis', {
+        const { data: response } = yield call(api.post, '/agendamento/horarios-disponiveis', {
             estabelecimentoId,
             data,
             servicoId,
             profissionalId,
-            
         });
         if (response.error) {
             showErrorToast(response.message);
             return false;
         }
-        yield put(updateDiasDisponiveis(response.agenda));
+        
+        // Transform the response from the new endpoint format to the expected format
+        // Convert flat array of times to the format expected by the component
+        const formattedTimes = response.horariosDisponiveis.map(time => [time]);
+        const formattedAgenda = [{
+            [response.data]: formattedTimes
+        }];
+        
+        yield put(updateDiasDisponiveis(formattedAgenda));
     } catch (err) {
         showErrorToast(err.message);
     }

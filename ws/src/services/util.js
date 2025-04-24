@@ -11,19 +11,17 @@ module.exports = {
         
     },
 
-    partesMinutos: (inicio, fim,duracao) => {
-        const partes = [];
-        let count = 0;
-        inicio = moment(inicio);
-        fim = moment(fim)     
-        while(fim > inicio) {
-            partes.push(inicio.format('HH:mm'));
-            inicio = inicio.add(duracao, 'minutes');
-            count++;
-        }
-        return partes;
-    },
-    
+    partesMinutos: (inicio, fim, duracao) => {
+      const partes = [];
+      inicio = moment(inicio);
+      fim = moment(fim);
+      while (inicio.clone().add(duracao, 'minutes') <= fim) {
+          partes.push(inicio.format('HH:mm'));
+          inicio = inicio.add(duracao, 'minutes');
+      }
+      return partes;
+  },
+  
 
     horariosDoDia: (data, hora) => {
         // Properly parse the time string using a specific format

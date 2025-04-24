@@ -214,7 +214,7 @@ const PublicScheduling = () => {
             
             /* 
             // Comentado até que a API esteja implementada
-            const { data } = await api.post('/profissional/dias-disponiveis', {
+            const { data } = await api.post('/agendamento/horarios-disponiveis', {
                 estabelecimentoId: pageData.estabelecimento.id,
                 profissionalId: formState.profissionalId,
                 servicoId: formState.servicoId,
@@ -226,7 +226,13 @@ const PublicScheduling = () => {
                 return;
             }
             
-            setAvailableDates(data.agenda || []);
+            // Transform the response from the new endpoint format to the expected format
+            const formattedTimes = data.horariosDisponiveis.map(time => [time]);
+            const formattedAgenda = [{
+                [data.data]: formattedTimes
+            }];
+            
+            setAvailableDates(formattedAgenda || []);
             setStep(2);
             */
             
