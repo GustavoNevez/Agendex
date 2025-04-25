@@ -192,7 +192,7 @@ const LinksManagement = () => {
 
     return (
         <div className="p-4 overflow-auto h-100" style={{ animation: 'fadeIn 0.5s ease-in-out' }}>
-            <div className="grid grid-cols-1 gap-6 px-4 mx-auto mb-20" style={{ maxWidth: '800px' }}>
+            <div className="grid grid-cols-1 gap-6  mx-auto mb-20" style={{ maxWidth: '800px' }}>
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
                     <div className="  p-4  ">
                         <h2 className="font-bold text-gray-800 text-2xl mb-3">Gerenciamento de Links Personalizados</h2>
