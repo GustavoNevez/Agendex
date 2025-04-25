@@ -930,7 +930,8 @@ const Agendamentos = () => {
                                                         const professionalName = appointment.profissional ? 
                                                             appointment.profissional.nome : 'Profissional';
                                                         
-                                                        const appointmentTime = moment(appointment.data);
+                                                        // Apply the same timezone adjustment as the daily view
+                                                        const appointmentTime = adjustTimeFromServer(appointment.data);
                                                         
                                                         return (
                                                             <div 

@@ -462,8 +462,8 @@ const Horarios = () => {
 
   return (
     <div className="col p-4 overflow-auto h-100" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
-      <div className="row px-4 mx-auto" style={{ maxWidth: '800px' }}>
-        <div className="col-12 ">
+      <div className="row  mx-auto" style={{ maxWidth: '800px' }}>
+        <div className="col-14 ">
          
 
           {/* Schedule configuration card */}
@@ -476,52 +476,46 @@ const Horarios = () => {
           </p>
               {/* Quick actions for day groups */}
               {!loading && (
-                <div className="mb-4 day-groups-container">
-                  
-                  <div className="row">
-                    {dayGroups.map((group, idx) => (
-                      <div key={idx} className="col-md-4 mb-3">
-                        <div className="card h-100">
-                          <div className="card-body ">
-                            <h6 className="card-title">{group.label}</h6>
-                            <div className="d-flex mt-3">
-                              <Button
-                                appearance="primary"
-                                color="green"
-                                size="sm"
-                                onClick={() => {
-                                  // Create a template with default hours
-                                  const defaultTimeSlots = [
-                                    { start: '08:00', end: '12:00' },
-                                    { start: '13:00', end: '18:00' }
-                                  ];
-                                  // Show confirmation before applying to all days in group
-                                  confirmSaveSchedule(group.values, true, defaultTimeSlots);
-                                }}
-                                className="mr-2"
-                              >
-                                <Icon icon="check" /> Ativar
-                              </Button>
-                              <Button
-                                appearance="primary"
-                                color="red"
-                                size="sm"
-                                onClick={() => {
-                                  // Show confirmation before disabling all days in group
-                                  confirmSaveSchedule(group.values, false, []);
-                                }}
-                              >
-                                <Icon icon="close" /> Desativar
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+  <div className="mb-4 schedule-groups-container">
+    <div className="row g-3">
+      {dayGroups.map((group, idx) => (
+        <div key={idx} className="col-lg-4 col-md-6 col-12 mb-3">
+          <div className="card h-100 border rounded">
+            <div className="card-body d-flex flex-column">
+              <h6 className="card-title mb-3">{group.label}</h6>
+              <div className="d-flex flex-wrap gap-2 mt-auto">
+                <button
+                  type="button"
+                  className="btn btn-success flex-grow-1 px-2"
+                  onClick={() => {
+                    const defaultTimeSlots = [
+                      { start: '08:00', end: '12:00' },
+                      { start: '13:00', end: '18:00' }
+                    ];
+                    confirmSaveSchedule(group.values, true, defaultTimeSlots);
+                  }}
+                >
+                  <i className="fa fa-check me-1"></i>
+                  Ativar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger flex-grow-1 px-2"
+                  onClick={() => {
+                    confirmSaveSchedule(group.values, false, []);
+                  }}
+                >
+                  <i className="fa fa-times me-1"></i>
+                  Desativar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
               {/* Days of week schedule */}
               <div className="schedule-days-container">
                 {loading ? (

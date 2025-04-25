@@ -87,7 +87,7 @@ router.post('/', async (req, res) => {
 });
 
 
-// Rota para buscar horários disponíveis com correção de fuso horário
+
 router.post('/horarios-disponiveis', async (req, res) => {
     try {
         const { data, estabelecimentoId, servicoId, profissionalId } = req.body;

@@ -1,7 +1,7 @@
 moment = require('moment');
 
 module.exports = {
-    DURACAO_SERVICO:30,
+    DURACAO_SERVICO:15,
 
     horaParaMinutos: (horaMinuto) => {
         
