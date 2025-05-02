@@ -1154,15 +1154,18 @@ const Agendamentos = () => {
                         renderDrawerFieldsSkeleton()
                     ) : (
                         <div className="mt-3 space-y-3">
-                        <div className="mb-3">
-                            <label className="block font-medium mb-1"><b>Serviços</b></label>
-                            <div className="relative w-full">
+                        <div className="mb-4">
+                            <label className="block font-medium mb-2"><b>Serviços</b></label>
+                            <div className="w-full">
                                 <SelectPicker
                                     data={(selectedProfessional ? filteredServices : servicos).map(servico => ({
                                         label: servico.titulo,
                                         value: servico.id,
                                     }))}
-                                    style={{ width: '100%' }}
+                                    style={{ 
+                                        width: '100%',
+                                        display: 'block'
+                                    }}
                                     value={selectedService}
                                     onChange={(value) => {
                                         setSelectedService(value);
@@ -1170,67 +1173,91 @@ const Agendamentos = () => {
                                         setSelectedPrice(selected ? selected.preco : null);
                                     }}
                                     placeholder="Todos serviços disponiveis"
-                                    menuStyle={{ zIndex: 1500 }}
+                                    menuStyle={{ 
+                                        zIndex: 1500,
+                                        maxHeight: '300px'
+                                    }}
                                     container={() => document.body}
                                     block
                                     appearance="default"
-                                    size={window.innerWidth < 768 ? "md" : "default"}
+                                    size="md"
+                                    cleanable={false}
+                                    className="rs-picker-default rs-picker-toggle-wrapper block"
                                 />
                             </div>
                         </div>
-                        <div className="mb-3">
-                            <label className="block font-medium mb-1"><b>Profissionais</b></label>
-                            <div className="relative w-full">
+                        <div className="mb-4">
+                            <label className="block font-medium mb-2"><b>Profissionais</b></label>
+                            <div className="w-full">
                                 <SelectPicker
                                     data={(selectedService ? filteredProfessionals : profissionais).map(profissional => ({
                                         label: profissional.nome,
                                         value: profissional.id,
                                     }))}
-                                    style={{ width: '100%' }}
+                                    style={{ 
+                                        width: '100%',
+                                        display: 'block'
+                                    }}
                                     value={selectedProfessional}
                                     onChange={setSelectedProfessional}
                                     placeholder="Selecione um profissional"
-                                    menuStyle={{ zIndex: 1500 }}
+                                    menuStyle={{ 
+                                        zIndex: 1500,
+                                        maxHeight: '300px'
+                                    }}
                                     container={() => document.body}
                                     block
                                     appearance="default"
-                                    size={window.innerWidth < 768 ? "md" : "default"}
+                                    size="md"
+                                    cleanable={false}
+                                    className="rs-picker-default rs-picker-toggle-wrapper block"
                                 />
                             </div>
                             {selectedService && filteredProfessionals.length === 0 && (
-                                <small className="text-red-500">Não há profissionais disponíveis para este serviço</small>
+                                <small className="text-red-500 mt-1 block">Não há profissionais disponíveis para este serviço</small>
                             )}
                             {selectedProfessional && selectedService && filteredServices.length === 0 && (
-                                <small className="text-red-500">Este profissional não realiza o serviço selecionado</small>
+                                <small className="text-red-500 mt-1 block">Este profissional não realiza o serviço selecionado</small>
                             )}
                         </div>
-                        <div className="mb-3">
-                            <label className="block font-medium mb-1"><b>Clientes</b></label>
-                            <div className="relative w-full">
+                        <div className="mb-4">
+                            <label className="block font-medium mb-2"><b>Clientes</b></label>
+                            <div className="w-full">
                                 <SelectPicker
                                     data={clientes.map(cliente => ({
                                         label: cliente.nome,
                                         value: cliente.id,
                                     }))}
-                                    style={{ width: '100%' }}
+                                    style={{ 
+                                        width: '100%',
+                                        display: 'block'
+                                    }}
                                     value={selectedClient}
                                     onChange={setSelectedClient}
                                     placeholder="Todos clientes ativos"
-                                    menuStyle={{ zIndex: 1500 }}
+                                    menuStyle={{ 
+                                        zIndex: 1500,
+                                        maxHeight: '300px'
+                                    }}
                                     container={() => document.body}
                                     block
                                     appearance="default"
-                                    size={window.innerWidth < 768 ? "md" : "default"}
+                                    size="md"
+                                    cleanable={false}
+                                    className="rs-picker-default rs-picker-toggle-wrapper block"
                                 />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="mb-3">
-                                <label className="block font-medium mb-1"><b>Data</b></label>
-                                <div className="relative w-full">
+                            <div className="mb-4">
+                                <label className="block font-medium mb-2"><b>Data</b></label>
+                                <div className="w-full">
                                     <DatePicker
                                         format="DD/MM/YYYY"
-                                        style={{ width: '100%' }}
+                                        style={{ 
+                                            width: '100%',
+                                            display: 'block'
+                                        }}
                                         value={selectedDate}
                                         onChange={setSelectedDate}
                                         placeholder="Selecione uma data"
@@ -1243,22 +1270,23 @@ const Agendamentos = () => {
                                         block
                                         placement="autoVertical"
                                         cleanable={false}
-                                        className="date-picker-custom"
-                                        popupClassName="calendar-popup-override"
-                                        appearance="default"
-                                        size={window.innerWidth < 768 ? "md" : "default"}
+                                        size="md"
+                                        className="rs-picker-default rs-picker-toggle-wrapper block"
                                     />
                                 </div>
                             </div>
-                            <div className="mb-3">
-                                <label className="block font-medium mb-1"><b>Horário</b></label>
-                                <div className="relative w-full">
+                            <div className="mb-4">
+                                <label className="block font-medium mb-2"><b>Horário</b></label>
+                                <div className="w-full">
                                     <SelectPicker
                                         data={availableTimes.map(time => ({
                                             label: time,
                                             value: time,
                                         }))}
-                                        style={{ width: '100%' }}
+                                        style={{ 
+                                            width: '100%',
+                                            display: 'block'
+                                        }}
                                         value={selectedTime}
                                         onChange={setSelectedTime}
                                         placeholder="Selecione um horário"
@@ -1268,31 +1296,28 @@ const Agendamentos = () => {
                                             overflow: 'auto',
                                             position: 'fixed',
                                             width: 'auto',
-                                            maxWidth: '190px',
+                                            minWidth: '100%',
                                             boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
                                         }}
                                         container={() => document.body}
                                         block
                                         placement="autoVertical"
-                                        appearance="default"
-                                        size={window.innerWidth < 768 ? "md" : "default"}
+                                        size="md"
+                                        cleanable={false}
+                                        className="rs-picker-default rs-picker-toggle-wrapper block"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex flex-col mt-4 space-y-2">
+                        <div className="flex flex-col mt-6 space-y-2">
                             <Button 
                                 block 
-                                size={window.innerWidth < 768 ? "md" : "lg"} 
+                                size="md" 
                                 appearance="primary" 
                                 color="green" 
                                 onClick={handleSaveAppointment} 
                                 disabled={!isSaveButtonEnabled}
-                                style={{
-                                    padding: window.innerWidth < 768 ? '8px 12px' : undefined,
-                                    fontSize: window.innerWidth < 768 ? '14px' : undefined
-                                }}
                             >
                                 <Icon icon="save" /> Salvar
                             </Button>
