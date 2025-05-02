@@ -385,7 +385,56 @@ body {
 }
 
 /* React Suite Picker Menu Styles */
-.rs-picker-menu {
+/* ==== Estilos para todos os pickers ==== */
+.rs-picker {
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  /* Ajustes para o toggle (a parte visível do controle) */
+  .rs-picker-toggle {
+    width: 100% !important;
+    display: flex !important; 
+    align-items: center !important;
+    justify-content: flex-start !important;
+    height: 40px !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+  }
+  
+  .rs-picker-toggle-wrapper {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  /* Corrigir centralização do texto e ícones dentro do picker */
+  .rs-picker-toggle-value,
+  .rs-picker-toggle-placeholder {
+    text-align: left !important;
+    line-height: 1.5 !important;
+    display: block !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    flex: 1 !important;
+  }
+  
+  /* Posicionar corretamente os ícones */
+  .rs-picker-toggle-caret,
+  .rs-picker-toggle-clean {
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+  }
+  
+  .rs-picker-toggle-clean {
+    right: 30px !important;
+  }
+  
+  /* ==== Estilos para o menu dropdown ==== */
+  .rs-picker-menu {
     position: fixed !important;
     z-index: 9999 !important;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
@@ -393,46 +442,69 @@ body {
     max-height: 80vh !important;
     overflow: auto !important;
     left: 50% !important;
-    margin-left: -150px !important; /* Half of max-width to center it */
+    transform: translateX(-50%) !important; /* Centraliza melhor que margin-left */
+    width: auto !important;
+    min-width: 200px !important;
     max-width: 300px !important;
-    width: calc(100% - 30px) !important; /* Keeps it from touching screen edges */
-}
-
-/* Date Picker Calendar Specific Styles */
-.rs-picker-menu .rs-calendar {
+    display: block !important;
+    pointer-events: auto !important;
+  }
+  
+  /* Versão simplificada que substitui o margin-left fixo */
+  .rs-picker-menu {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100% - 30px) !important; /* Evita tocar as bordas da tela */
+    max-width: 300px !important;
+  }
+  
+  /* ==== Estilos específicos para o DatePicker ==== */
+  .rs-picker-date .rs-picker-toggle-value {
+    display: flex !important;
+    align-items: center !important;
+  }
+  
+  .rs-picker-menu .rs-calendar {
     width: 100% !important;
     max-width: 300px !important;
     margin: 0 auto !important;
-}
-
-.rs-picker-menu .rs-calendar-table {
+  }
+  
+  .rs-picker-menu .rs-calendar-table {
     width: 100% !important;
     max-width: 300px !important;
-}
-
-/* Ensure calendar appears in view on mobile */
-@media (max-width: 480px) {
-    .rs-picker-menu {
-        left: 50% !important;
-        margin-left: -130px !important;
-        max-width: 260px !important;
-    }
-}
-
-/* Time Picker Specific Styles */
-.rs-picker-menu .rs-picker-select-menu {
+  }
+  
+  /* ==== Estilos específicos para o SelectPicker ==== */
+  .rs-picker-select .rs-picker-toggle {
+    justify-content: flex-start !important;
+    padding-right: 32px !important; /* Espaço para o ícone de seta */
+  }
+  
+  .rs-picker-menu .rs-picker-select-menu {
     width: auto !important;
     max-width: 190px !important;
-}
-
-/* Prevent menu from affecting page layout */
-.rs-picker-menu {
-    display: block !important;
-    pointer-events: auto !important;
-}
-
-/* Ensure picker dropdowns don't expand or break modal */
-.rs-picker-toggle-wrapper {
-    position: relative !important;
-    width: 100% !important;
-}
+  }
+  
+  /* ==== Responsividade ==== */
+  @media (max-width: 767px) {
+    .rs-picker-toggle {
+      height: 36px !important;
+      padding: 6px 10px !important;
+    }
+    
+    .rs-picker-toggle-textbox {
+      padding: 0 !important;
+    }
+  }
+  
+  /* Ajuste específico para telas muito pequenas */
+  @media (max-width: 480px) {
+    .rs-picker-menu {
+      max-width: 260px !important;
+    }
+    
+    .rs-picker-toggle {
+      font-size: 14px !important;
+    }
+  }

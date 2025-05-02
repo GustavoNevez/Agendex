@@ -1,4 +1,4 @@
-import { createContext, useState,useEffect } from "react";
+import { createContext, useState, useEffect } from "react";
 import Loading from "../components/Loading";
 import api from "../services/api";
 import { showSuccessToast, showErrorToast } from '../utils/notifications';
@@ -17,8 +17,22 @@ export const AuthProvider = ({children}) => {
             const storageToken = localStorage.getItem("@Auth:token");
     
             if(storageUser && storageToken) {
-                setUser(JSON.parse(storageUser));
-                api.defaults.headers.common["Authorization"] = `Bearer ${storageToken}`;
+                try {
+                    // Set the token in the headers for validation
+                    api.defaults.headers.common["Authorization"] = `Bearer ${storageToken}`;
+                    
+                    // Validate the token with a simple request
+                    // This will trigger the interceptor if the token is invalid
+                    await api.get("/auth/validate-token");
+                    
+                    // If we get here, the token is valid
+                    setUser(JSON.parse(storageUser));
+                } catch (error) {
+                    // If token validation fails, clear storage and don't set user
+                    localStorage.removeItem("@Auth:token");
+                    localStorage.removeItem("@Auth:user");
+                    api.defaults.headers.common["Authorization"] = null;
+                }
             }
             setLoading(false);
         };
