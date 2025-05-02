@@ -22,6 +22,14 @@ const INITIAL_STATE = {
     clientes: [], // Lista de clientes
     profissionais: [], // Lista de profissionais
     agendamentosSemana: [], // Lista de agendamentos dos próximos 7 dias
+    publicData: {
+        estabelecimento: null,
+        profissional: null,
+        servicos: [],
+        diasDisponiveis: [],
+        loading: false,
+        error: null
+    }
 };
 
 function agendamento(state = INITIAL_STATE, action) {
@@ -61,6 +69,41 @@ function agendamento(state = INITIAL_STATE, action) {
                 draft.agendamentosSemana = action.agendamentosSemana || [];
             });
         }
+        case types.FETCH_PUBLIC_DIAS_DISPONIVEIS:
+            return {
+                ...state,
+                publicData: {
+                    ...state.publicData,
+                    loading: true,
+                    error: null
+                }
+            };
+            
+        case types.UPDATE_PUBLIC_DIAS_DISPONIVEIS:
+            return {
+                ...state,
+                publicData: {
+                    ...state.publicData,
+                    diasDisponiveis: action.diasDisponiveis,
+                    loading: false
+                }
+            };
+        case types.UPDATE_PROFISSIONAL:
+            return {
+                ...state,
+                publicData: {
+                    ...state.publicData,
+                    profissional: action.profissional,
+                }
+            };
+        case types.UPDATE_PUBLIC_DATA:
+            return {
+                ...state,
+                publicData: {
+                    ...state.publicData,
+                    ...action.data
+                }
+            };
         default:
             return state;
     }
