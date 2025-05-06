@@ -43,6 +43,33 @@ const PublicScheduling = () => {
     const [agendamentoSuccess, setAgendamentoSuccess] = useState(false);
     const [agendamentoData, setAgendamentoData] = useState(null);
     const [currentScreen, setCurrentScreen] = useState('inicio'); // 'inicio', 'agendar', 'reservas', 'mais'
+    // Add mock reservations data
+    const [mockReservations] = useState([
+        {
+            id: 'r1',
+            servicoNome: 'Corte de Cabelo',
+            profissionalNome: 'João Silva',
+            data: moment().add(2, 'days').toISOString(),
+            status: 'confirmado',
+            valor: 50.00
+        },
+        {
+            id: 'r2',
+            servicoNome: 'Barba',
+            profissionalNome: 'Maria Oliveira',
+            data: moment().add(5, 'days').toISOString(),
+            status: 'pendente',
+            valor: 30.00
+        },
+        {
+            id: 'r3',
+            servicoNome: 'Combo Cabelo e Barba',
+            profissionalNome: 'João Silva',
+            data: moment().subtract(2, 'days').toISOString(),
+            status: 'concluído',
+            valor: 70.00
+        }
+    ]);
 
     useEffect(() => {
         if (customLink && type) {
@@ -497,56 +524,64 @@ const PublicScheduling = () => {
     ];
 
     const renderHomeScreen = () => (
-        <div className="p-4 flex flex-col h-full">
-            {/* Banner/Logo */}
-            <div className="w-full aspect-square max-h-48 bg-gray-100 rounded-lg mb-6 overflow-hidden">
+        <div className="p-4 flex flex-col h-full bg-gray-50">
+            {/* Hero Section */}
+            <div className="relative h-48 rounded-xl overflow-hidden mb-8 shadow-lg">
                 <img 
-                    src="https://img.freepik.com/vetores-premium/logotipo-da-barbearia-com-o-titulo-barbearia_854396-1.jpg?w=900" 
+                    src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.0.3"
                     alt={pageData.estabelecimento?.nome}
                     className="w-full h-full object-cover"
                 />
-            </div>
-
-            {/* Estabelecimento Info */}
-            <div className="text-center mb-6">
-                <h1 className="text-xl font-bold mb-2">{pageData.estabelecimento?.nome}</h1>
-                <div className="flex items-center justify-center mb-2">
-                    <Icon icon="star" className="text-yellow-400 mr-1" />
-                    <span className="font-medium">4.8</span>
-                    <span className="text-gray-500 text-sm ml-1">(128 avaliações)</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-6">
+                    <div className="text-white">
+                        <h1 className="text-2xl font-bold mb-1">{pageData.estabelecimento?.nome}</h1>
+                        <div className="flex items-center gap-2">
+                            <Icon icon="map-marker" className="text-orange-400" />
+                            <span className="text-sm opacity-90">{pageData.estabelecimento?.endereco}</span>
+                        </div>
+                    </div>
                 </div>
-                <p className="text-gray-600">{pageData.estabelecimento?.endereco}</p>
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Actions */}
+            <div className="grid grid-cols-2 gap-4 mb-8">
                 <button 
                     onClick={() => setCurrentScreen('agendar')}
-                    className="flex flex-col items-center justify-center p-4 bg-orange-600 rounded-lg text-white"
+                    className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm transition-all hover:shadow-md"
                 >
-                    <Icon icon="clock-o" style={{ fontSize: 24, marginBottom: 8 }} />
-                    <span>Novo Agendamento</span>
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-2">
+                        <Icon icon="clock-o" style={{ fontSize: 24 }} className="text-orange-600" />
+                    </div>
+                    <span className="font-medium text-gray-800">Agendar</span>
                 </button>
                 <button 
                     onClick={() => setCurrentScreen('reservas')}
-                    className="flex flex-col items-center justify-center p-4 bg-blue-600 rounded-lg text-white"
+                    className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm transition-all hover:shadow-md"
                 >
-                    <Icon icon="calendar" style={{ fontSize: 24, marginBottom: 8 }} />
-                    <span>Minhas Reservas</span>
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+                        <Icon icon="calendar" style={{ fontSize: 24 }} className="text-blue-600" />
+                    </div>
+                    <span className="font-medium text-gray-800">Reservas</span>
                 </button>
             </div>
 
-            {/* Serviços Populares */}
-            <div className="mb-6">
-                <h2 className="text-lg font-medium mb-3">Serviços Populares</h2>
+            {/* Services Section */}
+            <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800">Serviços Populares</h2>
                 <div className="space-y-3">
                     {pageData.servicos.slice(0, 3).map(service => (
-                        <div key={service.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                        <div key={service.id} 
+                             className="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+                        >
                             <div>
-                                <p className="font-medium">{service.titulo}</p>
+                                <p className="font-medium text-gray-800">{service.titulo}</p>
                                 <p className="text-sm text-gray-500">{service.duracao}</p>
                             </div>
-                            <p className="font-medium">R$ {service.preco.toFixed(2)}</p>
+                            <div className="text-right">
+                                <p className="font-medium text-orange-600">
+                                    R$ {service.preco.toFixed(2)}
+                                </p>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -554,22 +589,77 @@ const PublicScheduling = () => {
         </div>
     );
 
+    const renderReservasScreen = () => (
+        <div className="bg-gray-50 min-h-full p-4">
+            <div className="space-y-4">
+                {mockReservations.map(reservation => (
+                    <div key={reservation.id} 
+                         className="bg-white p-5 rounded-xl shadow-sm border border-gray-100"
+                    >
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 className="text-lg font-medium text-gray-800">
+                                    {reservation.servicoNome}
+                                </h3>
+                                <p className="text-gray-500">
+                                    com {reservation.profissionalNome}
+                                </p>
+                            </div>
+                            <span className={`
+                                px-3 py-1 rounded-full text-sm font-medium
+                                ${reservation.status === 'confirmado' 
+                                    ? 'bg-green-50 text-green-700' 
+                                    : reservation.status === 'pendente' 
+                                    ? 'bg-yellow-50 text-yellow-700'
+                                    : 'bg-gray-50 text-gray-700'
+                                }
+                            `}>
+                                {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="space-y-1">
+                                <p className="text-gray-500">Data</p>
+                                <p className="font-medium text-gray-800">
+                                    {moment(reservation.data).format('DD/MM/YYYY')}
+                                </p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-gray-500">Horário</p>
+                                <p className="font-medium text-gray-800">
+                                    {moment(reservation.data).format('HH:mm')}
+                                </p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-gray-500">Valor</p>
+                                <p className="font-medium text-orange-600">
+                                    R$ {reservation.valor.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    // Update the header and navigation
     return (
-        <div className="flex flex-col h-screen bg-white">
-            {/* Header - Só mostrar se não estiver na tela inicial */}
+        <div className="flex flex-col h-screen bg-gray-50">
             {currentScreen !== 'inicio' && (
-                <header className="bg-orange-600 p-4 flex items-center text-white">
-                    <button onClick={() => setCurrentScreen('inicio')} className="mr-4">
-                        <Icon icon="arrow-left" />
+                <header className="bg-white border-b border-gray-100 p-4 flex items-center sticky top-0 z-10">
+                    <button 
+                        onClick={() => setCurrentScreen('inicio')} 
+                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 mr-3"
+                    >
+                        <Icon icon="arrow-left" className="text-gray-600" />
                     </button>
-                    <h1 className="text-xl font-medium">
-                        {currentScreen === 'agendar' ? 'Agendamento' : 
-                         currentScreen === 'reservas' ? 'Minhas Reservas' : 'Mais'}
+                    <h1 className="text-xl font-semibold text-gray-800">
+                        {currentScreen === 'agendar' ? 'Novo Agendamento' : 'Minhas Reservas'}
                     </h1>
                 </header>
             )}
 
-            {/* Main Content */}
             <main className="flex-1 overflow-y-auto">
                 {currentScreen === 'inicio' && renderHomeScreen()}
                 {currentScreen === 'agendar' && (
@@ -724,42 +814,33 @@ const PublicScheduling = () => {
                         )}
                     </div>
                 )}
-                {currentScreen === 'reservas' && (
-                    <div className="p-4">
-                        <p className="text-center text-gray-500">Nenhuma reserva encontrada</p>
-                    </div>
-                )}
+                {currentScreen === 'reservas' && renderReservasScreen()}
             </main>
 
-            {/* Bottom Navigation */}
-            <nav className="bg-white border-t flex justify-around p-3">
+            <nav className="bg-white border-t border-gray-100 flex justify-around p-3 sticky bottom-0">
                 <button 
                     onClick={() => setCurrentScreen('inicio')}
-                    className={`flex flex-col items-center ${currentScreen === 'inicio' ? 'text-orange-600' : 'text-gray-600'}`}
+                    className={`flex flex-col items-center px-4 py-1 rounded-lg transition-colors
+                        ${currentScreen === 'inicio' ? 'text-orange-600' : 'text-gray-600 hover:text-gray-800'}`}
                 >
                     <Icon icon="home" style={{ fontSize: 20 }} />
-                    <span className="text-xs mt-1">INÍCIO</span>
+                    <span className="text-xs mt-1 font-medium">Início</span>
                 </button>
                 <button 
                     onClick={() => setCurrentScreen('agendar')}
-                    className={`flex flex-col items-center ${currentScreen === 'agendar' ? 'text-orange-600' : 'text-gray-600'}`}
+                    className={`flex flex-col items-center px-4 py-1 rounded-lg transition-colors
+                        ${currentScreen === 'agendar' ? 'text-orange-600' : 'text-gray-600 hover:text-gray-800'}`}
                 >
                     <Icon icon="clock-o" style={{ fontSize: 20 }} />
-                    <span className="text-xs mt-1">AGENDAR</span>
+                    <span className="text-xs mt-1 font-medium">Agendar</span>
                 </button>
                 <button 
                     onClick={() => setCurrentScreen('reservas')}
-                    className={`flex flex-col items-center ${currentScreen === 'reservas' ? 'text-orange-600' : 'text-gray-600'}`}
+                    className={`flex flex-col items-center px-4 py-1 rounded-lg transition-colors
+                        ${currentScreen === 'reservas' ? 'text-orange-600' : 'text-gray-600 hover:text-gray-800'}`}
                 >
                     <Icon icon="calendar" style={{ fontSize: 20 }} />
-                    <span className="text-xs mt-1">RESERVAS</span>
-                </button>
-                <button 
-                    onClick={() => setCurrentScreen('mais')}
-                    className={`flex flex-col items-center ${currentScreen === 'mais' ? 'text-orange-600' : 'text-gray-600'}`}
-                >
-                    <Icon icon="more" style={{ fontSize: 20 }} />
-                    <span className="text-xs mt-1">MAIS</span>
+                    <span className="text-xs mt-1 font-medium">Reservas</span>
                 </button>
             </nav>
         </div>

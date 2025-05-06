@@ -15,6 +15,7 @@ import Login from '../pages/Login/login_page';
 import Dashboard from '../pages/Dashboard/dashboard_page';
 import LinksManagement from '../pages/LinksManagement/links_page';
 import PublicScheduling from '../pages/PublicScheduling/public_page';
+import SMSVerification from '../pages/SMSVerification/sms_page';
 
 import '../styles.css';
 
@@ -44,6 +45,7 @@ const Routers = () => {
           <Route path="/registro" exact component={Registro} />
           <Route path="/login" exact component={Login} />
           <Route path="/" exact component={Login} />
+          <Route path="/verificacao-sms" exact component={SMSVerification} />
           
           {/* Rotas públicas para agendamento via links personalizados */}
           <Route path="/public/e/:customLink" component={PublicScheduling} />
