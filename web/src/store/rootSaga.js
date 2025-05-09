@@ -5,7 +5,8 @@ import servico from './modules/servico/sagas';
 import relatorio from './modules/relatorio/sagas';
 import profissional from './modules/profissional/sagas';
 import turno from './modules/turno/sagas';
+import publicSagas from './modules/public/sagas';
 
 export default function* rootSaga() {
-    return yield all([agendamento, clientes, servico, relatorio, profissional, turno]);
+    return yield all([agendamento, clientes, servico, relatorio, profissional, turno, publicSagas]);
 };
