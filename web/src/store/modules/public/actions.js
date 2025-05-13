@@ -40,3 +40,17 @@ export const updateClientAppointments = (appointments) => ({
     type: types.UPDATE_CLIENT_APPOINTMENTS,
     appointments,
 });
+
+export const registerClient = (clientData) => ({
+    type: types.REGISTER_CLIENT,
+    clientData,
+});
+
+export const verifyClient = (verificationData) => ({
+    type: types.VERIFY_CLIENT,
+    verificationData,
+});
+
+export function updateClientRegistration(payload) {
+    return { type: types.UPDATE_CLIENT_REGISTRATION, payload };
+}
