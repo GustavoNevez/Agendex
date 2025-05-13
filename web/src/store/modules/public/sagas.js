@@ -1,7 +1,7 @@
 import { all, takeLatest, call, put } from 'redux-saga/effects';
 import api from '../../../services/api';
 import types from './types';
-import { updatePublicData, updateAvailability, updateAppointment, updateClientAppointments } from './actions';
+import { updatePublicData, updateAvailability, updateAppointment, updateClientAppointments, updateClientRegistration } from './actions';
 import { showErrorToast, showSuccessToast } from '../../../utils/notifications';
 
 function* fetchPublicData({ customLink, dataType }) {
@@ -17,7 +17,7 @@ function* fetchPublicData({ customLink, dataType }) {
             showErrorToast(response.message);
             return;
         }
-        console.log('Dados públicos aaaa:', response);
+     
         yield put(updatePublicData(response));
     } catch (err) {
         console.error("Erro na requisição:", err.response?.data || err.message);
@@ -28,7 +28,7 @@ function* fetchPublicData({ customLink, dataType }) {
 function* checkAvailability({ availabilityData }) {
     try {
         const { data: response } = yield call(api.post, '/public/disponibilidade', availabilityData);
-        console.log('Dados de disponibilidade:', response);
+     
 
         if (response.error) {
             showErrorToast(response.message);
@@ -85,9 +85,63 @@ function* fetchClientAppointments({ clientData }) {
     }
 }
 
+function* registerClient({ clientData }) {
+    try {
+        const { data: response } = yield call(api.post, '/public/cliente/registro', clientData);
+        console.log('Register response:', response);
+        console.log('Client data:', clientData);
+        if (response.error) {
+            showErrorToast(response.message);
+            yield put(updateClientRegistration({ step: 1, success: false, message: response.message }));
+            return;
+        }
+
+        // LOG antes do put
+        console.log('Saga vai enviar para reducer:', { step: 2, success: true, data: clientData, message: response.message });
+        // Mesmo que a resposta não tenha step, envie para o reducer o step 2
+        yield put(updateClientRegistration({ 
+            step: 2,
+            success: true,
+            data: clientData,
+            message: response.message // opcional, para mostrar na tela
+        }));
+        
+        showSuccessToast('Código enviado! Verifique seu celular.');
+    } catch (err) {
+        console.error("Erro ao registrar cliente:", err);
+        yield put(updateClientRegistration({ step: 1, success: false, message: 'Erro ao enviar código de verificação' }));
+        showErrorToast('Erro ao enviar código de verificação');
+    }
+}
+
+function* verifyClient({ verificationData }) {
+    try {
+        const { data: response } = yield call(api.post, '/public/cliente/verificar', verificationData);
+        console.log('Verification response:', response);
+
+        if (response.error) {
+            showErrorToast(response.message);
+            return;
+        }
+
+        yield put(updateClientRegistration({ 
+            step: 3,
+            success: true,
+            clientData: response.cliente
+        }));
+        
+        showSuccessToast('Verificação concluída!');
+    } catch (err) {
+        console.error("Erro ao verificar código:", err);
+        showErrorToast('Erro ao verificar código');
+    }
+}
+
 export default all([
     takeLatest(types.FETCH_PUBLIC_DATA, fetchPublicData),
     takeLatest(types.CHECK_AVAILABILITY, checkAvailability),
     takeLatest(types.CREATE_APPOINTMENT, createAppointment),
     takeLatest(types.FETCH_CLIENT_APPOINTMENTS, fetchClientAppointments),
+    takeLatest(types.REGISTER_CLIENT, registerClient),
+    takeLatest(types.VERIFY_CLIENT, verifyClient),
 ]);

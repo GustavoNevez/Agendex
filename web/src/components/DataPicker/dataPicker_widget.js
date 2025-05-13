@@ -97,7 +97,7 @@ export default function CustomDatePicker({ onChange, disabledDate }) {
     <div className="w-full max-w-md mx-auto">
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200  shadow-sm hover:shadow-md active:bg-gray-100 transition">
         {/* Botões para trocar semana no topo */}
-        <div className="flex justify-between items-center p-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex justify-between items-center p-2 bg-gray-50 border-b border-gray-200">
           <button
             onClick={goToPreviousWeek}
             className="flex items-center  text-gray-600 hover:text-violet-600 transition-colors focus:outline-none"
