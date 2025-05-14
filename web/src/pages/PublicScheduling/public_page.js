@@ -12,6 +12,7 @@ import {
     fetchClientAppointments,
     registerClient,
     verifyClient,
+    loginClient, // importa a action de login
 } from '../../store/modules/public/actions';
 import CustomDatePicker from '../../components/DataPicker/dataPicker_widget';
 
@@ -50,11 +51,13 @@ const PublicScheduling = () => {
     const [currentScreen, setCurrentScreen] = useState('inicio'); // 'inicio', 'agendar', 'reservas', 'mais'
     const [smsCode, setSmsCode] = useState('');
     const [isVerifyingSms, setIsVerifyingSms] = useState(false);
+    const [isSelectingDate, setIsSelectingDate] = useState(false);
+    const [pendingDate, setPendingDate] = useState(null);
 
     const dispatch = useDispatch();
-    const { publicData, availability, clientAppointments } = useSelector((state) => state.public);
+    const { publicData, availability, clientAppointments, appointments } = useSelector((state) => state.public);
     const state = useSelector((state) => state);
-    console.log('Redux state:', state);
+   
 
     const fetchInitialData = () => {
         dispatch(fetchPublicData(customLink, type));
@@ -121,11 +124,12 @@ const PublicScheduling = () => {
                 estabelecimentoId: publicData.estabelecimento.id
             }));
         } else {
-            // Aqui deveria disparar uma action de login, mas como workaround:
-            // Simule o mesmo fluxo do cadastro para ir para a tela de verificação
-            setStep(5);
-            setVerificationStep(2);
-            setSubmitting(false);
+            // Chama a action de login
+            dispatch(loginClient({
+                email: formState.email,
+                senha: formState.senha,
+                estabelecimentoId: publicData.estabelecimento.id
+            }));
         }
     };
 
@@ -134,22 +138,55 @@ const PublicScheduling = () => {
 useEffect(() => {
     // Só avança para verificação se for registro
     if (isRegistering && clientRegistration) {
-        console.log('Client Registration:', clientRegistration);
         // Sucesso no cadastro: vai para verificação SMS
         if (clientRegistration.success === true && clientRegistration.step === 2) {
             setStep(5);
             setVerificationStep(2);
             setSubmitting(false);
         }
-      
+        // Sucesso na verificação: vai para tela de confirmação de agendamento
+        else if (clientRegistration.success === true && clientRegistration.step === 3) {
+            setStep(5);
+            setVerificationStep(3);
+            setSubmitting(false);
+        }
         // Erro no cadastro: mostra erro e libera botão
         else if (clientRegistration.success === false && clientRegistration.step === 1) {
             setRegistrationError(clientRegistration.message );
             setTimeout(() => setSubmitting(false), 2000);
         }
+        // Erro na verificação: volta para cadastro
+        else if (clientRegistration.success === false && clientRegistration.step === 3) {
+            setVerificationStep(1);
+            setStep(4);
+            setRegistrationError(clientRegistration.message || 'Código inválido, tente novamente.');
+            setTimeout(() => setSubmitting(false), 2000);
+        }
     }
     // eslint-disable-next-line
 }, [clientRegistration, isRegistering]);
+
+// Novo useEffect para capturar o agendamento criado e mostrar a tela de sucesso
+useEffect(() => {
+    if (appointments && appointments.length > 0) {
+        const lastAppointment = appointments[appointments.length - 1];
+        // Salva também os dados do serviço e profissional selecionados
+        const selectedService = publicData.servicos.find(s => s.id === formState.servicoId);
+        const selectedProfissional =
+            type === 'p'
+                ? publicData.profissional
+                : publicData.profissionais.find(p => p.id === formState.profissionalId);
+        setAgendamentoData({
+            ...lastAppointment,
+            _service: selectedService,
+            _profissional: selectedProfissional,
+        });
+        setAgendamentoSuccess(true);
+        setSubmitting(false);
+        setStep(6); // Avança para o novo step de sucesso
+    }
+    // eslint-disable-next-line
+}, [appointments]);
 
     const renderStep5 = () => {
         if (isRegistering && verificationStep === 2) {
@@ -173,15 +210,63 @@ useEffect(() => {
                         <Button
                             className='bg-violet-500 text-white hover:bg-violet-700 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded'
                             onClick={() => {
+                                if (isVerifyingSms) return;
+                                setIsVerifyingSms(true);
                                 dispatch(verifyClient({
                                     telefone: formState.telefone,
                                     code: smsCode,
                                     email: formState.email,
+                                    nome: formState.nome,
+                                    estabelecimentoId: publicData.estabelecimento.id,
+                                    senha: formState.senha,
                                 }));
+                                setTimeout(() => setIsVerifyingSms(false), 2000);
                             }}
+                            loading={isVerifyingSms}
+                            disabled={isVerifyingSms}
                         >
                             Verificar Código
                         </Button>
+                    </div>
+                </div>
+            );
+        }
+    
+        // Nova tela: sucesso na verificação
+        if (isRegistering && verificationStep === 3) {
+            // Avança para tela de confirmação de agendamento (card + botão finalizar)
+            return (
+                <div className="p-4 animate-fade-in">
+                    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+                        <h3 className="text-lg font-semibold text-violet-700 mb-4">
+                            Confirmar Agendamento
+                        </h3>
+                        <ServiceSummaryCard />
+                        <div className="mt-6">
+                            <Button
+                                className='bg-violet-500 text-white hover:bg-violet-700 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded'
+                                onClick={() => {
+                                    if (submitting) return;
+                                    setSubmitting(true);
+                                    const localDateTime = moment(`${moment(formState.data).format('YYYY-MM-DD')}T${formState.horario}`);
+                                    const serverDateTime = adjustTimeToServer(localDateTime);
+                                    dispatch(createAppointment({
+                                        estabelecimentoId: publicData.estabelecimento.id,
+                                        servicoId: formState.servicoId,
+                                        profissionalId: formState.profissionalId,
+                                        data: serverDateTime.toISOString(),
+                                        nome: formState.nome,
+                                        email: formState.email,
+                                        telefone: formState.telefone,
+                                    }));
+                                    // Remova o setAgendamentoSuccess(true) e setTimeout daqui
+                                }}
+                                loading={submitting}
+                                disabled={submitting}
+                            >
+                                Finalizar Agendamento
+                            </Button>
+                        </div>
                     </div>
                 </div>
             );
@@ -198,6 +283,8 @@ useEffect(() => {
                         <Button
                             className='bg-violet-500 text-white hover:bg-violet-700 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded'
                             onClick={() => {
+                                if (submitting) return;
+                                setSubmitting(true);
                                 const localDateTime = moment(`${moment(formState.data).format('YYYY-MM-DD')}T${formState.horario}`);
                                 const serverDateTime = adjustTimeToServer(localDateTime);
                                 dispatch(createAppointment({
@@ -209,8 +296,10 @@ useEffect(() => {
                                     email: formState.email,
                                     telefone: formState.telefone,
                                 }));
-                                setAgendamentoSuccess(true);
+                                // Remova o setAgendamentoSuccess(true) e setTimeout daqui
                             }}
+                            loading={submitting}
+                            disabled={submitting}
                         >
                             Confirmar Agendamento
                         </Button>
@@ -219,6 +308,78 @@ useEffect(() => {
             </div>
         );
     };
+
+// Novo Step 6: Tela de sucesso após agendamento
+const renderSuccessStep = () => {
+    if (!agendamentoData) return null;
+    // Use os dados salvos no agendamento, se disponíveis
+    const selectedService = agendamentoData._service || publicData.servicos.find(s => s.id === agendamentoData.servicoId);
+    const selectedProfissional =
+        agendamentoData._profissional?.nome ||
+        (type === 'p'
+            ? publicData.profissional?.nome
+            : publicData.profissionais.find(p => p.id === agendamentoData.profissionalId)?.nome) ||
+        'Profissional';
+    return (
+        <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-lg border border-violet-100 max-w-md w-full p-6">
+                <div className="flex flex-col items-center mb-6">
+                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-3">
+                        <Icon icon="check-circle" className="text-green-500" style={{ fontSize: 40 }} />
+                    </div>
+                    <h2 className="text-2xl font-bold text-violet-700 mb-1 text-center">Agendamento Confirmado!</h2>
+                    <p className="text-gray-600 text-center">Seu agendamento foi realizado com sucesso.</p>
+                </div>
+                {/* Card de resumo */}
+                <div className="mb-6">
+                    <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 shadow-md">
+                        <div className="flex items-center justify-between mb-2">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide">Data e horário</p>
+                                <p className="text-xl font-bold text-violet-700">
+                                    {moment(agendamentoData.data).format('DD/MM/YYYY')} às {moment(agendamentoData.data).format('HH:mm')}
+                                </p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs font-semibold uppercase tracking-wide">Valor</p>
+                                <p className="text-xl font-bold text-violet-700">
+                                    R$ {selectedService?.preco?.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 className="text-lg text-gray-800 font-bold">{selectedService?.titulo || 'Serviço'}</h2>
+                            <p className="text-sm mt-1">
+                                com <span className="font-semibold">{selectedProfissional}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {/* Botões */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                        appearance="primary"
+                        className="bg-violet-500 text-white hover:bg-violet-700 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded"
+                        onClick={resetForm}
+                    >
+                        Fazer novo agendamento
+                    </Button>
+                    <Button
+                        appearance="ghost"
+                        className="border border-violet-500 text-violet-700 hover:bg-violet-50 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded"
+                        onClick={() => {
+                            setAgendamentoSuccess(false);
+                            setStep(1);
+                            setCurrentScreen('reservas');
+                        }}
+                    >
+                        Ver minhas reservas
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
     const fetchReservations = () => {
         dispatch(fetchClientAppointments({
@@ -239,11 +400,19 @@ useEffect(() => {
     }, [publicData]);
 
     const handleDateSelect = (date) => {
+        if (isSelectingDate) {
+            // Ignora seleção durante bloqueio
+            return;
+        }
+        setIsSelectingDate(true);
         setFormState((prev) => ({
             ...prev,
             data: date,
             horario: '',
         }));
+        setTimeout(() => {
+            setIsSelectingDate(false);
+        }, 1500);
     };
 
     const resetForm = () => {
@@ -259,7 +428,8 @@ useEffect(() => {
         setAvailableHours([]);
         setStep(1);
         setAgendamentoSuccess(false);
-        setAgendamentoData(null);
+        // Remova o setAgendamentoData(null) daqui para manter os dados na tela de sucesso até o próximo agendamento
+        // setAgendamentoData(null);
     };
 
     // Função para formatar data e hora de forma amigável
@@ -303,28 +473,6 @@ useEffect(() => {
     // Se o link não for válido
 
 
-    // Tela de sucesso após agendamento
-    if (agendamentoSuccess && agendamentoData) {
-        return (
-            <Modal show={agendamentoSuccess} onHide={resetForm}>
-                <Modal.Header>
-                    <Modal.Title>Agendamento confirmado!</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <p>Detalhes do agendamento:</p>
-                    <p>Data e hora: {formatDateTime(agendamentoData.data)}</p>
-                    <p>Estabelecimento: {publicData.estabelecimento.nome}</p>
-                    <p>Serviço: {publicData.servicos.find(s => s.id === formState.servicoId)?.titulo}</p>
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button onClick={resetForm} appearance="primary">
-                        Fazer novo agendamento
-                    </Button>
-                </Modal.Footer>
-            </Modal>
-        );
-    }
-
     const renderHomeScreen = () => (
         <div className="p-4 flex flex-col items-center h-full bg-gray-50 overflow-y-auto" style={{ animation: 'fadeIn 0.4s ease-in-out' }}>
 
@@ -344,7 +492,7 @@ useEffect(() => {
 
             {/* Localização */}
             <div className="flex items-center justify-center gap-2 text-gray-600 text-sm mb-4">
-                <Icon icon="map-marker" className="text-orange-500" />
+                <Icon icon="map-marker" className="text-violet-700" />
                 <span>{publicData.estabelecimento?.endereco} Rua Saldanha Marinhao 2341 </span>
             </div>
 
@@ -363,7 +511,7 @@ useEffect(() => {
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(publicData.estabelecimento?.endereco || '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600 transition"
+                    className="flex items-center gap-2 px-4 py-2 bg-violet-700 text-white rounded-full shadow hover:bg-violet-600 transition"
                 >
                     <Icon icon="map" />
                     Ver no Mapa
@@ -376,8 +524,8 @@ useEffect(() => {
                     onClick={() => setCurrentScreen('agendar')}
                     className="flex flex-col items-center justify-center p-6 bg-white rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md active:bg-gray-100"
                 >
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-2">
-                        <Icon icon="clock-o" style={{ fontSize: 28 }} className="text-orange-600" />
+                    <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center mb-2">
+                        <Icon icon="clock-o" style={{ fontSize: 28 }} className="text-violet-700" />
                     </div>
                     <span className="font-bold text-gray-800 text-lg">Agendar</span>
                 </button>
@@ -503,8 +651,10 @@ useEffect(() => {
 
     const renderDatePicker = () => (
         <CustomDatePicker
-            onChange={(value) => handleDateSelect(value)}
+            onChange={handleDateSelect}
+            value={formState.data}
             disabledDate={(date) => date <= moment().toDate()}
+            disabled={isSelectingDate}
         />
     );
 
@@ -536,9 +686,9 @@ useEffect(() => {
                 {availableHours.map((hour, index) => (
                     <button
                         key={index}
-                        onClick={() =>
-                            setFormState((prev) => ({ ...prev, horario: hour }))
-                        }
+                        onClick={() => {
+                            setFormState((prev) => ({ ...prev, horario: hour }));
+                        }}
                         className={`min-w-0 break-words p-3 rounded-xl text-center border font-semibold transition-all duration-200 ease-in-out shadow-sm 
                             ${formState.horario === hour
                                 ? 'bg-violet-500 text-white border-violet-600'
@@ -553,7 +703,14 @@ useEffect(() => {
     };
 
     const renderFinalizeButton = () => {
-        if (!formState.horario || step === 4 || step === 5) return null;
+        // Garante que o botão não aparece em qualquer tela que não seja "agendar"
+        if (
+            currentScreen !== 'agendar' ||
+            !formState.horario ||
+            step === 4 ||
+            step === 5 ||
+            step === 6
+        ) return null;
     
         return (
             <div className="fixed bottom-16 left-0 right-0 bg-white shadow-lg p-4 border-t border-gray-200 z-20 animate-slide-in-bottom">
@@ -563,8 +720,12 @@ useEffect(() => {
                     block
                     appearance="primary"
                     onClick={() => {
+                        if (submitting) return;
+                        setSubmitting(true);
                         setStep(4); // Avança para o passo 4
+                        setTimeout(() => setSubmitting(false), 2000);
                     }}
+                    disabled={submitting}
                 >
                     Finalizar Agendamento
                 </Button>
@@ -806,8 +967,36 @@ useEffect(() => {
                                 <div className="mt-6">
                                     <Button
                                         className='bg-violet-500 text-white hover:bg-violet-700 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded'
-                                        onClick={handleSubmit}
+                                        onClick={() => {
+                                            if (submitting) return; // trava contra múltiplos cliques
+                                            setSubmitting(true);
+                                            setRegistrationError('');
+                                            if (isRegistering) {
+                                                if (formState.senha !== formState.confirmarSenha) {
+                                                    setRegistrationError('As senhas não conferem');
+                                                    setSubmitting(false);
+                                                    return;
+                                                }
+                                                dispatch(registerClient({
+                                                    nome: formState.nome,
+                                                    email: formState.email,
+                                                    telefone: formState.telefone,
+                                                    senha: formState.senha,
+                                                    estabelecimentoId: publicData.estabelecimento.id
+                                                }));
+                                            } else {
+                                                // Chama a action de login
+                                                dispatch(loginClient({
+                                                    email: formState.email,
+                                                    senha: formState.senha,
+                                                  
+                                                }));
+                                            }
+                                            // trava o botão por 2 segundos após envio
+                                            setTimeout(() => setSubmitting(false), 2000);
+                                        }}
                                         loading={submitting}
+                                        disabled={submitting}
                                     >
                                         {isRegistering ? "Confirmar Cadastro" : "Fazer Login"}
                                     </Button>
@@ -815,6 +1004,7 @@ useEffect(() => {
                             </div>
                         )}
                         {step === 5 && renderStep5()}
+                        {step === 6 && renderSuccessStep()}
                     </div>
                 )}
                 {currentScreen === 'reservas' && renderReservasScreen()}

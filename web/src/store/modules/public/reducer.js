@@ -53,7 +53,7 @@ function publicReducer(state = INITIAL_STATE, action) {
             });
         }
         case types.UPDATE_CLIENT_REGISTRATION: {
-            console.log('Reducer UPDATE_CLIENT_REGISTRATION payload:', action.payload);
+           
             return produce(state, (draft) => {
                 draft.clientRegistration = { ...action.payload };
                 draft.loading = false;
