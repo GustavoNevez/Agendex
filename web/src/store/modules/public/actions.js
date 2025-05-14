@@ -54,3 +54,10 @@ export const verifyClient = (verificationData) => ({
 export function updateClientRegistration(payload) {
     return { type: types.UPDATE_CLIENT_REGISTRATION, payload };
 }
+
+export function loginClient(loginData) {
+    return {
+        type: types.LOGIN_CLIENT,
+        loginData,
+    };
+}

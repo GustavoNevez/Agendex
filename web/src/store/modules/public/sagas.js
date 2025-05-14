@@ -88,8 +88,7 @@ function* fetchClientAppointments({ clientData }) {
 function* registerClient({ clientData }) {
     try {
         const { data: response } = yield call(api.post, '/public/cliente/registro', clientData);
-        console.log('Register response:', response);
-        console.log('Client data:', clientData);
+      
         if (response.error) {
             showErrorToast(response.message);
             yield put(updateClientRegistration({ step: 1, success: false, message: response.message }));
@@ -97,7 +96,7 @@ function* registerClient({ clientData }) {
         }
 
         // LOG antes do put
-        console.log('Saga vai enviar para reducer:', { step: 2, success: true, data: clientData, message: response.message });
+    
         // Mesmo que a resposta não tenha step, envie para o reducer o step 2
         yield put(updateClientRegistration({ 
             step: 2,
@@ -117,23 +116,60 @@ function* registerClient({ clientData }) {
 function* verifyClient({ verificationData }) {
     try {
         const { data: response } = yield call(api.post, '/public/cliente/verificar', verificationData);
-        console.log('Verification response:', response);
-
+        console.log(verificationData,"info pra enviar");
+     
         if (response.error) {
             showErrorToast(response.message);
+            yield put(updateClientRegistration({ step: 3, success: false, message: response.message }));
             return;
+        }
+
+        // Salva o token no localStorage se vier na resposta
+        if (response.token) {
+            localStorage.setItem('publicClientToken', response.token);
         }
 
         yield put(updateClientRegistration({ 
             step: 3,
             success: true,
-            clientData: response.cliente
+            clientData: response.cliente,
+            token: response.token
         }));
         
         showSuccessToast('Verificação concluída!');
     } catch (err) {
         console.error("Erro ao verificar código:", err);
         showErrorToast('Erro ao verificar código');
+        yield put(updateClientRegistration({ step: 3, success: false, message: 'Erro ao verificar código' }));
+    }
+}
+
+function* loginClient({ loginData }) {
+    try {
+        const { data: response } = yield call(api.post, '/public/cliente/login', loginData);
+
+        if (response.error) {
+            showErrorToast(response.message);
+            yield put(updateClientRegistration({ step: 1, success: false, message: response.message }));
+            return;
+        }
+
+        // Salva o token no localStorage
+        if (response.token) {
+            localStorage.setItem('publicClientToken', response.token);
+        }
+
+        yield put(updateClientRegistration({
+            step: 3,
+            success: true,
+            clientData: response.cliente,
+            token: response.token
+        }));
+
+        showSuccessToast('Login realizado com sucesso!');
+    } catch (err) {
+        showErrorToast(err.message || 'Erro ao fazer login');
+        yield put(updateClientRegistration({ step: 1, success: false, message: 'Erro ao fazer login' }));
     }
 }
 
@@ -144,4 +180,5 @@ export default all([
     takeLatest(types.FETCH_CLIENT_APPOINTMENTS, fetchClientAppointments),
     takeLatest(types.REGISTER_CLIENT, registerClient),
     takeLatest(types.VERIFY_CLIENT, verifyClient),
+    takeLatest(types.LOGIN_CLIENT, loginClient), // Adiciona o watcher para login
 ]);

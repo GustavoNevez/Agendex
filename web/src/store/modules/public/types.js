@@ -10,6 +10,7 @@ const types = {
     REGISTER_CLIENT: '@public/REGISTER_CLIENT',
     VERIFY_CLIENT: '@public/VERIFY_CLIENT',
     UPDATE_CLIENT_REGISTRATION: '@public/UPDATE_CLIENT_REGISTRATION',
+    LOGIN_CLIENT: '@public/LOGIN_CLIENT',
 };
 
 export default types;
