@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@fontsource/gantari": "^5.2.5",
+    "@fontsource/inter": "^5.2.5",
+    "@fontsource/urbanist": "^5.2.5",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",
     "@fullcalendar/react": "^6.1.15",
