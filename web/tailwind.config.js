@@ -3,6 +3,11 @@ export default {
   content: ["./src/**/*.{js,jsx,ts,tsx}"], // Garante que Tailwind funcione em todos os arquivos
   theme: {
     extend: {
+      fontFamily: {
+        inter: ['Inter', 'sans-serif'],
+        urbanist: ['Urbanist', 'sans-serif'],
+        gantari: ['Gantari', 'sans-serif'],
+      },
       keyframes: {
         'fade-in': {
           '0%': { opacity: '0' },
@@ -37,6 +42,12 @@ export default {
         'slide-out-top': 'slide-out-to-top 0.3s ease-in-out',
         'slide-out-bottom': 'slide-out-to-bottom 0.3s ease-in-out'
       }
+      
+    },
+     fontFamily: { // Defina a fonte global aqui
+      'sans': ['Inter', 'sans-serif'], // 'sans' é a categoria padrão para fontes sem serifa
+      'urbanist': ['Urbanist', 'sans-serif'], // Mantendo as outras definições
+      'gantari': ['Gantari', 'sans-serif'],
     },
   },
   plugins: [],

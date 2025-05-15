@@ -3,7 +3,7 @@ import { Link, Redirect } from "react-router-dom";
 import { AuthContext } from "../../context/auth";
 import { Eye, EyeOff } from 'lucide-react';
 import teste from "../../assets/teste.png"
-import './styles.css';
+
 
 
 export const Login = () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
-import { Button, SelectPicker, DatePicker, Modal, Icon, Panel } from 'rsuite';
+import { Button, Icon } from 'rsuite';
 import moment from 'moment';
 import 'moment/locale/pt-br';
 import 'rsuite/dist/styles/rsuite-default.css';
@@ -9,22 +9,45 @@ import {
     fetchPublicData,
     checkAvailability,
     createAppointment,
-    fetchClientAppointments,
     registerClient,
     verifyClient,
-    loginClient, // importa a action de login
+    loginClient,
 } from '../../store/modules/public/actions';
 import CustomDatePicker from '../../components/DataPicker/dataPicker_widget';
 
 moment.locale('pt-br');
 
+// Utils
+function maskPhone(value) {
+    let digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return `(${digits}`;
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+function formatPhoneToSend(value) {
+    let digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length < 10) return '';
+    return `+55 (${digits.slice(0, 2)})${digits.slice(2)}`;
+}
+const adjustTimeToServer = (localTime) => moment(localTime).subtract(3, 'hours');
+
+// Adicionado: função utilitária para formatar duração do serviço
+function formatServiceDuration(isoString) {
+    if (!isoString) return '';
+    const duration = moment.duration(isoString);
+    const hours = Math.floor(duration.asHours());
+    const minutes = duration.minutes();
+    return `${hours > 0 ? `${hours}h` : ''}${minutes > 0 ? ` ${minutes}min` : ''}`.trim();
+}
+
+// Main Component
 const PublicScheduling = () => {
+    // --- Routing and Type ---
     const { customLink } = useParams();
     const location = useLocation();
-
-    // Determine the type from the URL path instead of route params
     const type = location.pathname.includes('/public/e/') ? 'e' : 'p';
 
+    // --- State ---
     const [loading, setLoading] = useState(true);
     const [formState, setFormState] = useState({
         nome: '',
@@ -37,37 +60,38 @@ const PublicScheduling = () => {
         data: null,
         horario: '',
     });
-
     const [registrationError, setRegistrationError] = useState('');
-    const [verificationStep, setVerificationStep] = useState(1); // 1: Register, 2: Verify SMS
-
-    const [isRegistering, setIsRegistering] = useState(true); // Define se o usuário está se cadastrando ou fazendo login
-
+    const [verificationStep, setVerificationStep] = useState(1);
+    const [isRegistering, setIsRegistering] = useState(true);
     const [availableHours, setAvailableHours] = useState([]);
-    const [step, setStep] = useState(1); // 1: Seleção do serviço, 2: Seleção de data/hora, 3: Confirmação
+    const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
-    const [agendamentoSuccess, setAgendamentoSuccess] = useState(false);
     const [agendamentoData, setAgendamentoData] = useState(null);
-    const [currentScreen, setCurrentScreen] = useState('inicio'); // 'inicio', 'agendar', 'reservas', 'mais'
+    const [currentScreen, setCurrentScreen] = useState('inicio');
     const [smsCode, setSmsCode] = useState('');
     const [isVerifyingSms, setIsVerifyingSms] = useState(false);
     const [isSelectingDate, setIsSelectingDate] = useState(false);
-    const [pendingDate, setPendingDate] = useState(null);
+    const [touchedFieldsRegister, setTouchedFieldsRegister] = useState({});
+    const [touchedFieldsLogin, setTouchedFieldsLogin] = useState({});
+    const [triedSubmitRegister, setTriedSubmitRegister] = useState(false);
+    const [triedSubmitLogin, setTriedSubmitLogin] = useState(false);
 
+    // --- Redux ---
     const dispatch = useDispatch();
-    const { publicData, availability, clientAppointments, appointments } = useSelector((state) => state.public);
-    const state = useSelector((state) => state);
-   
+    const { publicData, availability, clientAppointments, appointments, clientRegistration } = useSelector((state) => state.public);
 
-    const fetchInitialData = () => {
+    // --- Data Fetch ---
+    useEffect(() => {
         dispatch(fetchPublicData(customLink, type));
-    };
+    }, [customLink, type, dispatch]);
 
+    useEffect(() => {
+        if (publicData && !publicData.error) setLoading(false);
+    }, [publicData]);
+
+    // --- Availability ---
     const fetchAvailableDates = () => {
-        if (!formState.servicoId || (!formState.profissionalId && type === 'e')) {
-            return;
-        }
-
+        if (!formState.servicoId || (!formState.profissionalId && type === 'e')) return;
         dispatch(checkAvailability({
             estabelecimentoId: publicData.estabelecimento.id,
             servicoId: formState.servicoId,
@@ -76,55 +100,69 @@ const PublicScheduling = () => {
         }));
     };
 
-    // Atualiza os horários disponíveis sempre que a disponibilidade no Redux mudar
     useEffect(() => {
         if (availability) {
             setLoading(true);
-            // Pequeno delay para simular carregamento visualmente perceptível
             const timeout = setTimeout(() => {
                 setAvailableHours(availability);
                 setLoading(false);
-            }, 300); // Ajuste o tempo conforme o necessário
-
+            }, 300);
             return () => clearTimeout(timeout);
         }
     }, [availability]);
 
-
-    // Atualiza os horários disponíveis sempre que a data for alterada
     useEffect(() => {
-        if (formState.data) {
-            fetchAvailableDates();
-        }
+        if (formState.data) fetchAvailableDates();
+        // eslint-disable-next-line
     }, [formState.data]);
 
-    // Função para ajustar a data local para o formato esperado pelo backend
-    const adjustTimeToServer = (localTime) => {
-        return moment(localTime).subtract(3, 'hours'); // Ajuste de fuso horário (UTC-3 para UTC-7)
+    // --- Form Handlers ---
+    const handleInputChange = (field, value) => {
+        if (field === 'telefone') {
+            setFormState({ ...formState, telefone: maskPhone(value) });
+        } else {
+            setFormState({ ...formState, [field]: value });
+        }
+    };
+    const handleBlur = (field) => {
+        if (isRegistering) {
+            setTouchedFieldsRegister({ ...touchedFieldsRegister, [field]: true });
+        } else {
+            setTouchedFieldsLogin({ ...touchedFieldsLogin, [field]: true });
+        }
     };
 
+    // --- Submit/Register/Login ---
     const handleSubmit = () => {
+        if (isRegistering) setTriedSubmitRegister(true);
+        else setTriedSubmitLogin(true);
         setSubmitting(true);
         setRegistrationError('');
-    
+
         if (isRegistering) {
-            // Validate passwords match
+            if (!formState.nome || !formState.email || !formState.telefone || !formState.senha || !formState.confirmarSenha) {
+                setRegistrationError('Preencha todos os campos obrigatórios.');
+                setSubmitting(false);
+                return;
+            }
             if (formState.senha !== formState.confirmarSenha) {
                 setRegistrationError('As senhas não conferem');
                 setSubmitting(false);
                 return;
             }
-    
-            // Dispatch register action
             dispatch(registerClient({
                 nome: formState.nome,
                 email: formState.email,
-                telefone: formState.telefone,
+                telefone: formatPhoneToSend(formState.telefone),
                 senha: formState.senha,
                 estabelecimentoId: publicData.estabelecimento.id
             }));
         } else {
-            // Chama a action de login
+            if (!formState.email || !formState.senha) {
+                setRegistrationError('Preencha email e senha.');
+                setSubmitting(false);
+                return;
+            }
             dispatch(loginClient({
                 email: formState.email,
                 senha: formState.senha,
@@ -133,60 +171,137 @@ const PublicScheduling = () => {
         }
     };
 
-    const { clientRegistration } = useSelector((state) => state.public);
+    // --- Registration/Verification Steps ---
+    useEffect(() => {
+        if (isRegistering && clientRegistration) {
+            if (clientRegistration.success === true && clientRegistration.step === 2) {
+                setStep(5);
+                setVerificationStep(2);
+                setSubmitting(false);
+            } else if (clientRegistration.success === true && clientRegistration.step === 3) {
+                setStep(5);
+                setVerificationStep(3);
+                setSubmitting(false);
+            } else if (clientRegistration.success === false && clientRegistration.step === 1) {
+                setRegistrationError(clientRegistration.message);
+                setTimeout(() => setSubmitting(false), 2000);
+            } else if (clientRegistration.success === false && clientRegistration.step === 3) {
+                setVerificationStep(1);
+                setStep(4);
+                setRegistrationError(clientRegistration.message || 'Código inválido, tente novamente.');
+                setTimeout(() => setSubmitting(false), 2000);
+            }
+        }
+        // eslint-disable-next-line
+    }, [clientRegistration, isRegistering]);
 
-useEffect(() => {
-    // Só avança para verificação se for registro
-    if (isRegistering && clientRegistration) {
-        // Sucesso no cadastro: vai para verificação SMS
-        if (clientRegistration.success === true && clientRegistration.step === 2) {
-            setStep(5);
-            setVerificationStep(2);
-            setSubmitting(false);
+    useEffect(() => {
+        if (clientRegistration) {
+            if (isRegistering && triedSubmitRegister) {
+                if (clientRegistration.success === false && clientRegistration.step === 1) {
+                    setRegistrationError(clientRegistration.message);
+                    setTimeout(() => setSubmitting(false), 2000);
+                }
+            }
+            if (!isRegistering && triedSubmitLogin) {
+                if (clientRegistration.success === false && clientRegistration.step === 1) {
+                    setRegistrationError(clientRegistration.message || 'Cliente não encontrado');
+                    setTimeout(() => setSubmitting(false), 2000);
+                }
+            }
         }
-        // Sucesso na verificação: vai para tela de confirmação de agendamento
-        else if (clientRegistration.success === true && clientRegistration.step === 3) {
-            setStep(5);
-            setVerificationStep(3);
-            setSubmitting(false);
-        }
-        // Erro no cadastro: mostra erro e libera botão
-        else if (clientRegistration.success === false && clientRegistration.step === 1) {
-            setRegistrationError(clientRegistration.message );
-            setTimeout(() => setSubmitting(false), 2000);
-        }
-        // Erro na verificação: volta para cadastro
-        else if (clientRegistration.success === false && clientRegistration.step === 3) {
-            setVerificationStep(1);
-            setStep(4);
-            setRegistrationError(clientRegistration.message || 'Código inválido, tente novamente.');
-            setTimeout(() => setSubmitting(false), 2000);
-        }
-    }
-    // eslint-disable-next-line
-}, [clientRegistration, isRegistering]);
+        // eslint-disable-next-line
+    }, [clientRegistration, isRegistering, triedSubmitRegister, triedSubmitLogin]);
 
-// Novo useEffect para capturar o agendamento criado e mostrar a tela de sucesso
-useEffect(() => {
-    if (appointments && appointments.length > 0) {
-        const lastAppointment = appointments[appointments.length - 1];
-        // Salva também os dados do serviço e profissional selecionados
+    // --- Appointment Success Step ---
+    useEffect(() => {
+        if (appointments && appointments.length > 0) {
+            const lastAppointment = appointments[appointments.length - 1];
+            const selectedService = publicData.servicos.find(s => s.id === formState.servicoId);
+            const selectedProfissional =
+                type === 'p'
+                    ? publicData.profissional
+                    : publicData.profissionais.find(p => p.id === formState.profissionalId);
+            setAgendamentoData({
+                ...lastAppointment,
+                _service: selectedService,
+                _profissional: selectedProfissional,
+            });
+            setSubmitting(false);
+            setStep(6);
+        }
+        // eslint-disable-next-line
+    }, [appointments]);
+
+    // --- UI Handlers ---
+    const handleDateSelect = (date) => {
+        if (isSelectingDate) return;
+        setIsSelectingDate(true);
+        setFormState((prev) => ({
+            ...prev,
+            data: date,
+            horario: '',
+        }));
+        setTimeout(() => setIsSelectingDate(false), 1500);
+    };
+
+    const resetForm = () => {
+        setFormState({
+            nome: '',
+            email: '',
+            telefone: '',
+            servicoId: '',
+            profissionalId: type === 'p' ? formState.profissionalId : '',
+            data: null,
+            horario: '',
+        });
+        setAvailableHours([]);
+        setStep(1);
+        // setAgendamentoData(null); // Keep data for success screen until next scheduling
+    };
+
+    // --- UI Effects ---
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            const timeBlockContainer = document.querySelector('.time-block-container');
+            if (timeBlockContainer && !timeBlockContainer.contains(event.target)) {
+                setFormState((prev) => ({ ...prev, horario: '' }));
+            }
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+
+    // --- Render Functions ---
+    const ServiceSummaryCard = () => {
         const selectedService = publicData.servicos.find(s => s.id === formState.servicoId);
+        const selectedDate = moment(formState.data).format('DD/MM/YYYY');
+        const selectedTime = formState.horario;
         const selectedProfissional =
             type === 'p'
-                ? publicData.profissional
-                : publicData.profissionais.find(p => p.id === formState.profissionalId);
-        setAgendamentoData({
-            ...lastAppointment,
-            _service: selectedService,
-            _profissional: selectedProfissional,
-        });
-        setAgendamentoSuccess(true);
-        setSubmitting(false);
-        setStep(6); // Avança para o novo step de sucesso
-    }
-    // eslint-disable-next-line
-}, [appointments]);
+                ? publicData.profissional?.nome
+                : publicData.profissionais.find(p => p.id === formState.profissionalId)?.nome || 'Profissional';
+        return (
+            <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 shadow-md mb-4">
+                <div className="flex items-center justify-between mb-2">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide">Data e horário</p>
+                        <p className="text-xl font-bold text-violet-700">{selectedDate} às {selectedTime}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs font-semibold uppercase tracking-wide">Valor</p>
+                        <p className="text-xl font-bold text-violet-700">R$ {selectedService?.preco.toFixed(2)}</p>
+                    </div>
+                </div>
+                <div>
+                    <h2 className="text-lg text-gray-800 font-bold">{selectedService?.titulo || 'Serviço'}</h2>
+                    <p className="text-sm mt-1">
+                        com <span className="font-semibold">{selectedProfissional}</span>
+                    </p>
+                </div>
+            </div>
+        );
+    };
 
     const renderStep5 = () => {
         if (isRegistering && verificationStep === 2) {
@@ -231,10 +346,7 @@ useEffect(() => {
                 </div>
             );
         }
-    
-        // Nova tela: sucesso na verificação
         if (isRegistering && verificationStep === 3) {
-            // Avança para tela de confirmação de agendamento (card + botão finalizar)
             return (
                 <div className="p-4 animate-fade-in">
                     <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
@@ -259,7 +371,6 @@ useEffect(() => {
                                         email: formState.email,
                                         telefone: formState.telefone,
                                     }));
-                                    // Remova o setAgendamentoSuccess(true) e setTimeout daqui
                                 }}
                                 loading={submitting}
                                 disabled={submitting}
@@ -271,7 +382,6 @@ useEffect(() => {
                 </div>
             );
         }
-    
         return (
             <div className="p-4 animate-fade-in">
                 <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
@@ -296,7 +406,6 @@ useEffect(() => {
                                     email: formState.email,
                                     telefone: formState.telefone,
                                 }));
-                                // Remova o setAgendamentoSuccess(true) e setTimeout daqui
                             }}
                             loading={submitting}
                             disabled={submitting}
@@ -309,169 +418,72 @@ useEffect(() => {
         );
     };
 
-// Novo Step 6: Tela de sucesso após agendamento
-const renderSuccessStep = () => {
-    if (!agendamentoData) return null;
-    // Use os dados salvos no agendamento, se disponíveis
-    const selectedService = agendamentoData._service || publicData.servicos.find(s => s.id === agendamentoData.servicoId);
-    const selectedProfissional =
-        agendamentoData._profissional?.nome ||
-        (type === 'p'
-            ? publicData.profissional?.nome
-            : publicData.profissionais.find(p => p.id === agendamentoData.profissionalId)?.nome) ||
-        'Profissional';
-    return (
-        <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-lg border border-violet-100 max-w-md w-full p-6">
-                <div className="flex flex-col items-center mb-6">
-                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-3">
-                        <Icon icon="check-circle" className="text-green-500" style={{ fontSize: 40 }} />
-                    </div>
-                    <h2 className="text-2xl font-bold text-violet-700 mb-1 text-center">Agendamento Confirmado!</h2>
-                    <p className="text-gray-600 text-center">Seu agendamento foi realizado com sucesso.</p>
-                </div>
-                {/* Card de resumo */}
-                <div className="mb-6">
-                    <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 shadow-md">
-                        <div className="flex items-center justify-between mb-2">
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide">Data e horário</p>
-                                <p className="text-xl font-bold text-violet-700">
-                                    {moment(agendamentoData.data).format('DD/MM/YYYY')} às {moment(agendamentoData.data).format('HH:mm')}
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-xs font-semibold uppercase tracking-wide">Valor</p>
-                                <p className="text-xl font-bold text-violet-700">
-                                    R$ {selectedService?.preco?.toFixed(2)}
-                                </p>
-                            </div>
-                        </div>
-                        <div>
-                            <h2 className="text-lg text-gray-800 font-bold">{selectedService?.titulo || 'Serviço'}</h2>
-                            <p className="text-sm mt-1">
-                                com <span className="font-semibold">{selectedProfissional}</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                {/* Botões */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <Button
-                        appearance="primary"
-                        className="bg-violet-500 text-white hover:bg-violet-700 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded"
-                        onClick={resetForm}
-                    >
-                        Fazer novo agendamento
-                    </Button>
-                    <Button
-                        appearance="ghost"
-                        className="border border-violet-500 text-violet-700 hover:bg-violet-50 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded"
-                        onClick={() => {
-                            setAgendamentoSuccess(false);
-                            setStep(1);
-                            setCurrentScreen('reservas');
-                        }}
-                    >
-                        Ver minhas reservas
-                    </Button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-    const fetchReservations = () => {
-        dispatch(fetchClientAppointments({
-            email: formState.email,
-            telefone: formState.telefone,
-            estabelecimentoId: publicData.estabelecimento.id,
-        }));
-    };
-
-    useEffect(() => {
-        fetchInitialData();
-    }, [customLink, type]);
-
-    useEffect(() => {
-        if (publicData && !publicData.error) {
-            setLoading(false);
-        }
-    }, [publicData]);
-
-    const handleDateSelect = (date) => {
-        if (isSelectingDate) {
-            // Ignora seleção durante bloqueio
-            return;
-        }
-        setIsSelectingDate(true);
-        setFormState((prev) => ({
-            ...prev,
-            data: date,
-            horario: '',
-        }));
-        setTimeout(() => {
-            setIsSelectingDate(false);
-        }, 1500);
-    };
-
-    const resetForm = () => {
-        setFormState({
-            nome: '',
-            email: '',
-            telefone: '',
-            servicoId: '',
-            profissionalId: type === 'p' ? formState.profissionalId : '',
-            data: null,
-            horario: '',
-        });
-        setAvailableHours([]);
-        setStep(1);
-        setAgendamentoSuccess(false);
-        // Remova o setAgendamentoData(null) daqui para manter os dados na tela de sucesso até o próximo agendamento
-        // setAgendamentoData(null);
-    };
-
-    // Função para formatar data e hora de forma amigável
-    const formatDateTime = (isoString) => {
-        if (!isoString) return '';
-        return moment(isoString).format('DD/MM/YYYY [às] HH:mm');
-    };
-
-    const formatServiceDuration = (isoString) => {
-        if (!isoString) return '';
-        const adjustedTime = moment(isoString);
-        return adjustedTime.format('HH:mm');
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            const timeBlockContainer = document.querySelector('.time-block-container');
-            if (timeBlockContainer && !timeBlockContainer.contains(event.target)) {
-                setFormState((prev) => ({ ...prev, horario: '' })); // Desmarca o horário
-            }
-        };
-
-        document.addEventListener('click', handleClickOutside);
-
-        return () => {
-            document.removeEventListener('click', handleClickOutside);
-        };
-    }, []);
-
-    if (loading && !publicData?.estabelecimento) {
+    const renderSuccessStep = () => {
+        if (!agendamentoData) return null;
+        const selectedService = agendamentoData._service || publicData.servicos.find(s => s.id === agendamentoData.servicoId);
+        const selectedProfissional =
+            agendamentoData._profissional?.nome ||
+            (type === 'p'
+                ? publicData.profissional?.nome
+                : publicData.profissionais.find(p => p.id === agendamentoData.profissionalId)?.nome) ||
+            'Profissional';
         return (
-            <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-                <div className="text-center">
-                    <Icon icon="spinner" spin style={{ fontSize: 40 }} />
-                    <p className="mt-3">Carregando...</p>
+            <div className="flex flex-col items-center justify-center min-h-[70vh] p-4 animate-fade-in">
+                <div className="bg-white rounded-2xl shadow-lg border border-violet-100 max-w-md w-full p-6">
+                    <div className="flex flex-col items-center mb-6">
+                        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-3">
+                            <Icon icon="check-circle" className="text-green-500" style={{ fontSize: 40 }} />
+                        </div>
+                        <h2 className="text-2xl font-bold text-violet-700 mb-1 text-center">Agendamento Confirmado!</h2>
+                        <p className="text-gray-600 text-center">Seu agendamento foi realizado com sucesso.</p>
+                    </div>
+                    <div className="mb-6">
+                        <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 shadow-md">
+                            <div className="flex items-center justify-between mb-2">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-wide">Data e horário</p>
+                                    <p className="text-xl font-bold text-violet-700">
+                                        {moment(agendamentoData.data).format('DD/MM/YYYY')} às {moment(agendamentoData.data).format('HH:mm')}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs font-semibold uppercase tracking-wide">Valor</p>
+                                    <p className="text-xl font-bold text-violet-700">
+                                        R$ {selectedService?.preco?.toFixed(2)}
+                                    </p>
+                                </div>
+                            </div>
+                            <div>
+                                <h2 className="text-lg text-gray-800 font-bold">{selectedService?.titulo || 'Serviço'}</h2>
+                                <p className="text-sm mt-1">
+                                    com <span className="font-semibold">{selectedProfissional}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Button
+                            appearance="primary"
+                            className="bg-violet-500 text-white hover:bg-violet-700 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded"
+                            onClick={resetForm}
+                        >
+                            Fazer novo agendamento
+                        </Button>
+                        <Button
+                            appearance="ghost"
+                            className="border border-violet-500 text-violet-700 hover:bg-violet-50 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded"
+                            onClick={() => {
+                                setStep(1);
+                                setCurrentScreen('reservas');
+                            }}
+                        >
+                            Ver minhas reservas
+                        </Button>
+                    </div>
                 </div>
             </div>
         );
-    }
-
-    // Se o link não for válido
-
+    };
 
     const renderHomeScreen = () => (
         <div className="p-4 flex flex-col items-center h-full bg-gray-50 overflow-y-auto" style={{ animation: 'fadeIn 0.4s ease-in-out' }}>
@@ -541,43 +553,6 @@ const renderSuccessStep = () => {
             </div>
         </div>
     );
-    const ServiceSummaryCard = () => {
-        const selectedService = publicData.servicos.find(s => s.id === formState.servicoId);
-        const selectedDate = moment(formState.data).format('DD/MM/YYYY');
-        const selectedTime = formState.horario;
-        const selectedProfissional =
-            type === 'p'
-                ? publicData.profissional?.nome
-                : publicData.profissionais.find(p => p.id === formState.profissionalId)?.nome || 'Profissional';
-    
-        return (
-            <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 shadow-md mb-4">
-                <div className="flex items-center justify-between mb-2">
-                    {/* Data e Hora em destaque à esquerda */}
-                    <div>
-                        <p className="text-xs  font-semibold uppercase tracking-wide">Data e horário</p>
-                        <p className="text-xl font-bold text-violet-700">{selectedDate} às {selectedTime}</p>
-                    </div>
-    
-                    {/* Preço à direita */}
-                    <div className="text-right">
-                        <p className="text-xs  font-semibold uppercase tracking-wide">Valor</p>
-                        <p className="text-xl font-bold text-violet-700">R$ {selectedService?.preco.toFixed(2)}</p>
-                    </div>
-                </div>
-    
-                {/* Nome do serviço e profissional */}
-                <div>
-                    <h2 className="text-lg text-gray-800  font-bold ">{selectedService?.titulo || 'Serviço'}</h2>
-                    <p className="text-sm mt-1">
-                        com <span className="font-semibold">{selectedProfissional}</span>
-                    </p>
-                </div>
-            </div>
-        );
-    };
-    
-
     const renderReservasScreen = () => (
         <div className="bg-gray-50 min-h-full p-4">
             <div className="space-y-4">
@@ -734,78 +709,101 @@ const renderSuccessStep = () => {
     };
     
 
-    const renderUserForm = () => (
-        <div className="bg-white rounded-xl shadow-md p-4 border border-gray-100">
-            <h3 className="text-lg font-semibold text-violet-700 mb-4">
-                {isRegistering ? "Seus dados" : "Login"}
-            </h3>
-            <div className="space-y-4">
-                {isRegistering && (
+    const renderUserForm = () => {
+        // Escolhe o controle correto
+        const touchedFields = isRegistering ? touchedFieldsRegister : touchedFieldsLogin;
+        const triedSubmit = isRegistering ? triedSubmitRegister : triedSubmitLogin;
+
+        return (
+            <div className="bg-white rounded-xl shadow-md p-4 border border-gray-100">
+                <h3 className="text-lg font-semibold text-violet-700 mb-4">
+                    {isRegistering ? "Seus dados" : "Login"}
+                </h3>
+                <div className="space-y-4">
+                    {isRegistering && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Nome completo <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-violet-500 ${touchedFields.nome && !formState.nome ? 'border-red-400' : 'border-gray-300'}`}
+                                value={formState.nome}
+                                onChange={e => handleInputChange('nome', e.target.value)}
+                                onBlur={() => handleBlur('nome')}
+                                placeholder="Digite seu nome completo"
+                                autoComplete="name"
+                            />
+                            {touchedFields.nome && !formState.nome && <span className="text-xs text-red-500">Campo obrigatório</span>}
+                        </div>
+                    )}
+
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Nome completo</label>
+                        <label className="block text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
                         <input
-                            type="text"
-                            className="w-full mt-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-500"
-                            value={formState.nome}
-                            onChange={(e) => setFormState({ ...formState, nome: e.target.value })}
-                            placeholder="Digite seu nome completo"
+                            type="email"
+                            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-violet-500 ${touchedFields.email && !formState.email ? 'border-red-400' : 'border-gray-300'}`}
+                            value={formState.email}
+                            onChange={e => handleInputChange('email', e.target.value)}
+                            onBlur={() => handleBlur('email')}
+                            placeholder="Digite seu email"
+                            autoComplete="email"
                         />
+                        {touchedFields.email && !formState.email && <span className="text-xs text-red-500">Campo obrigatório</span>}
                     </div>
-                )}
-    
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Email</label>
-                    <input
-                        type="email"
-                        className="w-full mt-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        value={formState.email}
-                        onChange={(e) => setFormState({ ...formState, email: e.target.value })}
-                        placeholder="Digite seu email"
-                    />
-                </div>
-    
-                {isRegistering && (
+
+                    {isRegistering && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Telefone <span className="text-red-500">*</span></label>
+                            <input
+                                type="tel"
+                                className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-violet-500 ${touchedFields.telefone && (!formState.telefone || formState.telefone.replace(/\D/g, '').length < 10) ? 'border-red-400' : 'border-gray-300'}`}
+                                value={formState.telefone}
+                                onChange={e => handleInputChange('telefone', e.target.value)}
+                                onBlur={() => handleBlur('telefone')}
+                                placeholder="(99) 99999-9999"
+                                maxLength={16}
+                                autoComplete="tel"
+                            />
+                            {touchedFields.telefone && (!formState.telefone || formState.telefone.replace(/\D/g, '').length < 10) && <span className="text-xs text-red-500">Digite um telefone válido</span>}
+                        </div>
+                    )}
+
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Telefone</label>
-                        <input
-                            type="tel"
-                            className="w-full mt-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-500"
-                            value={formState.telefone}
-                            onChange={(e) => setFormState({ ...formState, telefone: e.target.value })}
-                            placeholder="Digite seu telefone"
-                        />
-                    </div>
-                )}
-    
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Senha</label>
-                    <input
-                        type="password"
-                        className="w-full mt-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        value={formState.senha}
-                        onChange={(e) => setFormState({ ...formState, senha: e.target.value })}
-                        placeholder="Digite sua senha"
-                    />
-                </div>
-    
-                {isRegistering && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Confirmar senha</label>
+                        <label className="block text-sm font-medium text-gray-700">Senha <span className="text-red-500">*</span></label>
                         <input
                             type="password"
-                            className="w-full mt-1 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-violet-500"
-                            value={formState.confirmarSenha}
-                            onChange={(e) => setFormState({ ...formState, confirmarSenha: e.target.value })}
-                            placeholder="Confirme sua senha"
+                            className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-violet-500 ${touchedFields.senha && !formState.senha ? 'border-red-400' : 'border-gray-300'}`}
+                            value={formState.senha}
+                            onChange={e => handleInputChange('senha', e.target.value)}
+                            onBlur={() => handleBlur('senha')}
+                            placeholder="Digite sua senha"
+                            autoComplete={isRegistering ? "new-password" : "current-password"}
                         />
+                        {touchedFields.senha && !formState.senha && <span className="text-xs text-red-500">Campo obrigatório</span>}
                     </div>
+
+                    {isRegistering && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Confirmar senha <span className="text-red-500">*</span></label>
+                            <input
+                                type="password"
+                                className={`w-full mt-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-violet-500 ${touchedFields.confirmarSenha && (!formState.confirmarSenha || formState.senha !== formState.confirmarSenha) ? 'border-red-400' : 'border-gray-300'}`}
+                                value={formState.confirmarSenha}
+                                onChange={e => handleInputChange('confirmarSenha', e.target.value)}
+                                onBlur={() => handleBlur('confirmarSenha')}
+                                placeholder="Confirme sua senha"
+                                autoComplete="new-password"
+                            />
+                            {touchedFields.confirmarSenha && (!formState.confirmarSenha || formState.senha !== formState.confirmarSenha) && <span className="text-xs text-red-500">As senhas não conferem</span>}
+                        </div>
+                    )}
+                </div>
+                {/* Só mostra erro se tentou submeter */}
+                {registrationError && triedSubmit && (
+                    <div className="text-red-500 text-sm mt-2">{registrationError}</div>
                 )}
             </div>
-            {registrationError && (
-                <div className="text-red-500 text-sm mt-2">{registrationError}</div>
-            )}
-        </div>
-    );
+        );
+    };
     
 
     return (
@@ -942,7 +940,13 @@ const renderSuccessStep = () => {
                                                 ? 'bg-violet-700 text-white '
                                                 : 'bg-white border border-violet-200 text-violet-700 hover:bg-violet-100'
                                         }`}
-                                        onClick={() => setIsRegistering(true)}
+                                        onClick={() => {
+                                            setIsRegistering(true);
+                                            setRegistrationError('');
+                                            setTriedSubmitRegister(false);
+                                            setTriedSubmitLogin(false);
+                                            setTouchedFieldsLogin({});
+                                        }}
                                     >
                                         Cadastrar-se
                                     </Button>
@@ -952,7 +956,13 @@ const renderSuccessStep = () => {
                                                 ? 'bg-violet-700  text-white'
                                                 : 'bg-white border border-violet-200 text-violet-700 hover:bg-violet-100'
                                         }`}
-                                        onClick={() => setIsRegistering(false)}
+                                        onClick={() => {
+                                            setIsRegistering(false);
+                                            setRegistrationError('');
+                                            setTriedSubmitRegister(false);
+                                            setTriedSubmitLogin(false);
+                                            setTouchedFieldsRegister({});
+                                        }}
                                     >
                                         Fazer Login
                                     </Button>
@@ -968,32 +978,24 @@ const renderSuccessStep = () => {
                                     <Button
                                         className='bg-violet-500 text-white hover:bg-violet-700 transition-all px-4 py-2 duration-200 text-base font-semibold w-full rounded'
                                         onClick={() => {
-                                            if (submitting) return; // trava contra múltiplos cliques
-                                            setSubmitting(true);
-                                            setRegistrationError('');
                                             if (isRegistering) {
-                                                if (formState.senha !== formState.confirmarSenha) {
-                                                    setRegistrationError('As senhas não conferem');
-                                                    setSubmitting(false);
-                                                    return;
-                                                }
-                                                dispatch(registerClient({
-                                                    nome: formState.nome,
-                                                    email: formState.email,
-                                                    telefone: formState.telefone,
-                                                    senha: formState.senha,
-                                                    estabelecimentoId: publicData.estabelecimento.id
-                                                }));
+                                                setTouchedFieldsRegister({
+                                                    nome: true,
+                                                    email: true,
+                                                    telefone: true,
+                                                    senha: true,
+                                                    confirmarSenha: true
+                                                });
+                                                setTriedSubmitRegister(true);
                                             } else {
-                                                // Chama a action de login
-                                                dispatch(loginClient({
-                                                    email: formState.email,
-                                                    senha: formState.senha,
-                                                  
-                                                }));
+                                                setTouchedFieldsLogin({
+                                                    email: true,
+                                                    senha: true
+                                                });
+                                                setTriedSubmitLogin(true);
                                             }
-                                            // trava o botão por 2 segundos após envio
-                                            setTimeout(() => setSubmitting(false), 2000);
+                                            if (submitting) return;
+                                            handleSubmit();
                                         }}
                                         loading={submitting}
                                         disabled={submitting}

@@ -1,36 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@font-face {
-    font-family: 'Ubuntu';
-    font-style: normal;
-    font-weight: 400;
-    src: local('Ubuntu'), local('Ubuntu-Regular'),
-         url('./assets/fonts/Ubuntu-Regular.ttf') format('truetype');
-  }
-  
-  @font-face {
-    font-family: 'Ubuntu';
-    font-style: italic;
-    font-weight: 400;
-    src: local('Ubuntu Italic'), local('Ubuntu-Italic'),
-         url('./assets/fonts/Ubuntu-Italic.ttf') format('truetype');
-  }
-  
-  @font-face {
-    font-family: 'Ubuntu';
-    font-style: normal;
-    font-weight: 700;
-    src: local('Ubuntu Bold'), local('Ubuntu-Bold'),
-         url('./assets/fonts/Ubuntu-Bold.ttf') format('truetype');
-  }
-  
-  @font-face {
-    font-family: 'Ubuntu';
-    font-style: italic;
-    font-weight: 700;
-    src: local('Ubuntu Bold Italic'), local('Ubuntu-BoldItalic'),
-         url('./assets/fonts/Ubuntu-BoldItalic.ttf') format('truetype');
-  }
-  
+    /* Importando fontes do Google Fonts
+    Inter
+    Urbanist
+    Gantari
+    */
+    body {
+    font-family: 'Urbanist', sans-serif; /* Ou 'Urbanist', 'Gantari', etc. */
+    }
 
   :root {
     --primary-light: #FED811;
@@ -50,7 +29,9 @@
     background-color: white;
 }
 
-/* Sidebar Desktop */
+body {
+    
+}
 
 .user-name {
     font-size: 16px;
@@ -60,10 +41,6 @@
 }
 
 
-body {
-    /* Estilização geral do corpo da página */
-    font-family: 'Ubuntu', sans-serif;
-}
 
 .calendar-container {
     /* Estilização do contêiner do calendário */
