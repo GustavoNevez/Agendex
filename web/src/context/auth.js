@@ -102,3 +102,9 @@ export const AuthProvider = ({children}) => {
         </AuthContext.Provider>
     )
 }
+
+export function isPublicClientAuthenticated() {
+    const token = localStorage.getItem('publicClientToken');
+    // Opcional: validar expiração do token JWT aqui
+    return !!token;
+}

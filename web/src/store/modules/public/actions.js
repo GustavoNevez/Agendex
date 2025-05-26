@@ -21,19 +21,21 @@ export const updateAvailability = (horariosDisponiveis) => ({
     horariosDisponiveis,
 });
 
-export const createAppointment = (appointmentData) => ({
-    type: types.CREATE_APPOINTMENT,
-    appointmentData,
-});
+export function createAppointment(payload) {
+    return {
+        type: types.CREATE_APPOINTMENT,
+        ...payload
+    }
+}
 
 export const updateAppointment = (appointment) => ({
     type: types.UPDATE_APPOINTMENT,
     appointment,
 });
 
-export const fetchClientAppointments = (clientData) => ({
+export const fetchClientAppointments = ({ customLink }) => ({
     type: types.FETCH_CLIENT_APPOINTMENTS,
-    clientData,
+    customLink,
 });
 
 export const updateClientAppointments = (appointments) => ({

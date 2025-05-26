@@ -606,6 +606,12 @@ const Agendamentos = () => {
         );
     };
 
+    // Novo: verifica se falta cadastro de entidades essenciais
+    const missingEntities = [];
+    if (!servicos || servicos.length === 0) missingEntities.push('serviços');
+    if (!profissionais || profissionais.length === 0) missingEntities.push('profissionais');
+    if (!clientes || clientes.length === 0) missingEntities.push('clientes');
+
     const renderCalendar = () => {
         const monthStart = moment(currentMonth).startOf('month');
         const monthEnd = moment(currentMonth).endOf('month');
@@ -647,10 +653,10 @@ const Agendamentos = () => {
                 days.push(
                     <td key={cloneDay.format('YYYY-MM-DD')} className="text-center p-0 xs:p-0.5 md:p-1 relative">
                         <button
-                            className={`w-8 h-8 sm:w-7 sm:h-7 md:w-7 md:h-7 lg:w-10 lg:h-10 rounded-full mx-auto text-xs md:text-sm font-medium transition-all duration-200 ${
-                                isSelected ? 'bg-indigo-600 text-white shadow-md' : 
-                                isToday ? 'border-2 border-indigo-500 text-indigo-600' : 
-                                isCurrentMonth ? 'hover:bg-gray-100 text-gray-700' : 'text-gray-300'
+                            className={`w-8 h-8 sm:w-7 sm:h-7 md:w-7 md:h-7 lg:w-10 lg:h-10 rounded-full mx-auto text-xs md:text-sm font-medium transition-all duration-200   ${
+                                isSelected ? 'bg-indigo-600 text-white shadow-md lg:w-8 lg:h-8 focus:outline-none' : 
+                                isToday ? 'border-2 border-indigo-500 text-indigo-600 lg:w-8 lg:h-8 focus:outline-none' : 
+                                isCurrentMonth ? 'hover:bg-gray-100 text-gray-700 focus:outline-none' : 'text-gray-300'
                             }`}
                             onClick={() => handleDateClick(cloneDay.toDate())}
                             disabled={!isCurrentMonth}
@@ -671,7 +677,7 @@ const Agendamentos = () => {
                 <div className="calendar-header  flex justify-between items-center bg-white p-4 border-b border-gray-100">
                     <button 
                         onClick={prevMonth} 
-                        className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors duration-200"
+                        className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors duration-200 focus:outline-none"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="m15 18-6-6 6-6"/>
@@ -682,7 +688,7 @@ const Agendamentos = () => {
                     </div>
                     <button 
                         onClick={nextMonth} 
-                        className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors duration-200"
+                        className="bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors duration-200 focus:outline-none"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="m9 18 6-6-6-6"/>
@@ -1042,6 +1048,18 @@ const Agendamentos = () => {
 
     return (
         <div className="p-4">
+            {/* AVISO DE ENTIDADES FALTANDO */}
+            {missingEntities.length > 0 && (
+                <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded shadow text-yellow-800 flex items-center gap-2">
+                    <svg className="w-6 h-6 text-yellow-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 11 3 12a9 9 0 0118 0z" />
+                    </svg>
+                    <span>
+                        Para cadastrar um agendamento, é necessário cadastrar: <b>{missingEntities.join(', ')}</b>.
+                    </span>
+                </div>
+            )}
+
             {/* Calendar and Day View Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-20">
                 <div className="md:col-span-1 flex flex-col">
