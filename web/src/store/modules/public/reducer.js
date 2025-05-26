@@ -7,11 +7,6 @@ const INITIAL_STATE = {
         profissional: null,
         servicos: [],
         profissionais: [],
-        registrationStatus: { // Removi este, pois você tem clientRegistration fora
-            step: 1,
-            success: false,
-            data: null
-        }
     },
     availability: [],
     appointments: [],
@@ -20,7 +15,8 @@ const INITIAL_STATE = {
         step: 1, // 1: Registration, 2: Verification, 3: Completed
         success: false,
         data: null, // Store user data during registration
-        clientData: null // Store final client data after verification
+        clientData: null, // Store final client data after verification
+        userToken: false // <--- adiciona aqui
     },
     loading: false,
     horariosDisponiveis: [],
@@ -55,7 +51,10 @@ function publicReducer(state = INITIAL_STATE, action) {
         case types.UPDATE_CLIENT_REGISTRATION: {
            
             return produce(state, (draft) => {
-                draft.clientRegistration = { ...action.payload };
+                draft.clientRegistration = { 
+                    ...draft.clientRegistration, 
+                    ...action.payload 
+                };
                 draft.loading = false;
             });
         }
