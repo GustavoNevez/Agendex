@@ -11,12 +11,15 @@ const INITIAL_STATE = {
     availability: [],
     appointments: [],
     clientAppointments: [],
+    lastAppointmentCreated: null,
+    appointmentCreationSuccess: false,
+    appointmentCreationError: null,
     clientRegistration: {
-        step: 1, // 1: Registration, 2: Verification, 3: Completed
+        step: 1,
         success: false,
-        data: null, // Store user data during registration
-        clientData: null, // Store final client data after verification
-        userToken: false // <--- adiciona aqui
+        data: null,
+        clientData: null,
+        userToken: false
     },
     loading: false,
     horariosDisponiveis: [],
@@ -49,13 +52,36 @@ function publicReducer(state = INITIAL_STATE, action) {
             });
         }
         case types.UPDATE_CLIENT_REGISTRATION: {
-           
             return produce(state, (draft) => {
-                draft.clientRegistration = { 
-                    ...draft.clientRegistration, 
-                    ...action.payload 
+                draft.clientRegistration = {
+                    ...draft.clientRegistration,
+                    ...action.payload
                 };
                 draft.loading = false;
+            });
+        }
+        case types.CREATE_APPOINTMENT_SUCCESS: {
+            return produce(state, (draft) => {
+
+                draft.lastAppointmentCreated = action.appointment;
+                draft.appointmentCreationSuccess = true;
+                draft.appointmentCreationError = null;
+                draft.loading = false;
+            });
+        }
+        case types.CREATE_APPOINTMENT_ERROR: {
+            return produce(state, (draft) => {
+                draft.appointmentCreationSuccess = false;
+                draft.appointmentCreationError = action.error;
+                draft.lastAppointmentCreated = null;
+                draft.loading = false;
+            });
+        }
+        case types.RESET_APPOINTMENT_SUCCESS: {
+            return produce(state, (draft) => {
+                draft.lastAppointmentCreated = null;
+                draft.appointmentCreationSuccess = false;
+                draft.appointmentCreationError = null;
             });
         }
         default:

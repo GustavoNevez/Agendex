@@ -30,8 +30,6 @@ const Step3ChooseDateTime = ({
                 {renderTimeBlocks()}
             </div>
         )}
-        {/* User Information Form */}
-        {formState.horario && renderUserForm()}
     </div>
 );
 
