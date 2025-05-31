@@ -120,9 +120,23 @@ function* fetchClientAppointments({ customLink }) {
             {},
             { withCredentials: true }
         );
+
+        // Novo formato: agResp.agendamentos é um array de objetos já formatados pelo backend
         if (agResp && Array.isArray(agResp.agendamentos)) {
+            // Mapeia para garantir compatibilidade com o front
+            const mapped = agResp.agendamentos.map(a => ({
+                id: a._id || a.id || undefined,
+                servicoNome: a.servicoNome || a.servico || '', // aceita ambos
+                profissionalNome: a.profissionalNome || a.profissional || '', // <-- CORRIGIDO
+                data: a.data,
+                horario: a.horario,
+                valor: typeof a.valor === 'number' ? a.valor : (typeof a.preco === 'number' ? a.preco : (typeof a.servicoPreco === 'number' ? a.servicoPreco : 0)),
+                status: a.status || 'confirmado',
+                dataCadastro: a.dataCadastro || a.createdAt || null,
+            }));
+            console.log('Mapped Appointments:', mapped);
             yield put(updateClientRegistration({ userToken: true }));
-            yield put(updateClientAppointments(agResp.agendamentos));
+            yield put(updateClientAppointments(mapped));
         } else {
             yield put(updateClientRegistration({ userToken: false }));
             yield put(updateClientAppointments([]));

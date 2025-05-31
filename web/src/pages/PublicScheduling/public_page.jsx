@@ -753,10 +753,10 @@ const PublicScheduling = () => {
                                     setCurrentScreen('inicio');
                                 }
                             }}
-                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-all duration-200 focus:outline-none shadow-sm"
+                            className="w-10 h-10 flex items-center justify-center p-0 rounded-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-all duration-200 focus:outline-none shadow-sm"
                             aria-label="Voltar"
                         >
-                            <Icon icon="arrow-left" className="text-lg" />
+                            <Icon icon="chevron-left" style={{ fontSize: 20 }} />
                         </button>
                         {/* ...existing code... */}
                     </div>
