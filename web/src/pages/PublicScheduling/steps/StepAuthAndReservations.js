@@ -155,61 +155,101 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
         // Mostra apenas os agendamentos, sem formulário de login/registro
         return (
             <div className="bg-gray-50 min-h-full p-4 lg:flex lg:justify-center">
-                <div className="space-y-4 w-full max-w-2xl">
+                <div className="space-y-6 w-full max-w-2xl">
+                    <h2 className="text-2xl font-bold text-violet-700 mb-2 text-left">Meus Agendamentos</h2>
                     {clientAppointments && clientAppointments.length > 0 ? (
-                        clientAppointments.map(reservation => (
-                            <div key={reservation.id}
-                                className="bg-white p-5 rounded-xl shadow-sm border border-gray-100"
-                            >
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 className="text-lg font-medium text-gray-800">
-                                            {reservation.servicoNome}
-                                        </h3>
-                                        <p className="text-gray-500">
-                                            com {reservation.profissionalNome}
-                                        </p>
+                        <div className="grid gap-6 sm:grid-cols-2">
+                            {clientAppointments.map((reservation, idx) => (
+                                <div
+                                    key={reservation.id || idx}
+                                    className="bg-white p-6 rounded-2xl border border-violet-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-full"
+                                    style={{ minHeight: 220 }}
+                                >
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-12 h-12 rounded-full bg-violet-50 flex items-center justify-center border border-violet-100">
+                                            <Icon icon="calendar" className="text-violet-600" style={{ fontSize: 26 }} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-gray-800 leading-tight">
+                                                {reservation.servicoNome || reservation.servico || ''}
+                                            </h3>
+                                            <p className="text-gray-500 text-sm">
+                                                com <span className="font-semibold text-violet-700">
+                                                    {reservation.profissionalNome || reservation.profissional || ''}
+                                                </span>
+                                            </p>
+                                        </div>
                                     </div>
-                                    <span className={`
-                                        px-3 py-1 rounded-full text-sm font-medium
-                                        ${reservation.status === 'confirmado'
-                                            ? 'bg-green-50 text-green-700'
-                                            : reservation.status === 'pendente'
-                                                ? 'bg-yellow-50 text-yellow-700'
-                                                : 'bg-gray-50 text-gray-700'
-                                        }
-                                    `}>
-                                        {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
-                                    </span>
+                                    <div className="grid grid-cols-3 gap-2 text-sm mb-3">
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-gray-400 font-medium flex items-center gap-1">
+                                                <Icon icon="calendar-o" className="text-violet-400" /> Data
+                                            </span>
+                                            <span className="font-semibold text-violet-700">
+                                                {moment(reservation.data).format('DD/MM/YYYY')}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-gray-400 font-medium flex items-center gap-1">
+                                                <Icon icon="clock-o" className="text-violet-400" /> Horário
+                                            </span>
+                                            <span className="font-semibold text-violet-700">
+                                                {reservation.horario || moment(reservation.data).format('HH:mm')}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-gray-400 font-medium flex items-center gap-1">
+                                                <Icon icon="money" className="text-orange-400" /> Valor
+                                            </span>
+                                            <span className="font-semibold text-orange-600">
+                                                R$ {typeof reservation.valor === 'number'
+                                                    ? reservation.valor.toFixed(2)
+                                                    : (typeof reservation.servicoPreco === 'number'
+                                                        ? reservation.servicoPreco.toFixed(2)
+                                                        : '0,00')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-auto">
+                                        <span className={`
+                                            px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1
+                                            ${reservation.status === 'confirmado'
+                                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                                : reservation.status === 'pendente'
+                                                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                                    : 'bg-gray-50 text-gray-700 border border-gray-200'
+                                            }
+                                        `}>
+                                            <Icon
+                                                icon={
+                                                    reservation.status === 'confirmado'
+                                                        ? 'check-circle'
+                                                        : reservation.status === 'pendente'
+                                                            ? 'hourglass-2'
+                                                            : 'info-circle'
+                                                }
+                                                className={
+                                                    reservation.status === 'confirmado'
+                                                        ? 'text-green-500'
+                                                        : reservation.status === 'pendente'
+                                                            ? 'text-yellow-500'
+                                                            : 'text-gray-400'
+                                                }
+                                            />
+                                            {reservation.status
+                                                ? reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)
+                                                : 'Confirmado'}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-4 text-sm">
-                                    <div className="space-y-1">
-                                        <p className="text-gray-500">Data</p>
-                                        <p className="font-medium text-gray-800">
-                                            {moment(reservation.data).format('DD/MM/YYYY')}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-gray-500">Horário</p>
-                                        <p className="font-medium text-gray-800">
-                                            {moment(reservation.data).format('HH:mm')}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-gray-500">Valor</p>
-                                        <p className="font-medium text-orange-600">
-                                            R$ {typeof reservation.valor === 'number' ? reservation.valor.toFixed(2) : '0,00'}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
+                            ))}
+                        </div>
                     ) : (
-                        <div className="bg-white p-6 rounded-xl shadow-sm text-center max-w-lg mx-auto">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-lg mx-auto border border-gray-100">
                             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Icon icon="calendar" style={{ fontSize: 24 }} className="text-gray-500" />
+                                <Icon icon="calendar" style={{ fontSize: 28 }} className="text-gray-400" />
                             </div>
-                            <h3 className="text-lg font-medium mb-2">Nenhuma reserva encontrada</h3>
+                            <h3 className="text-xl font-semibold mb-2 text-gray-700">Nenhuma reserva encontrada</h3>
                             <p className="text-gray-500 mb-4">Você ainda não possui agendamentos realizados.</p>
                         </div>
                     )}
@@ -254,7 +294,7 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
             !(clientRegistration && clientRegistration.success === true);
 
         return (
-            <div className="bg-white rounded-xl shadow-md p-4 border border-gray-100">
+            <div className="bg-white rounded-xl shadow-md p-4 border border-gray-100 text-left">
                 <h3 className="text-lg font-semibold text-violet-700 mb-4">
                     {isRegistering ? "Seus dados" : "Login"}
                 </h3>
@@ -344,7 +384,7 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm text-center mt-10 max-w-lg mx-auto">
+        <div className="bg-white p-6 rounded-xl shadow-sm mt-10 max-w-lg mx-auto text-left">
             <h3 className="text-lg font-medium mb-2">Faça login para ver seus agendamentos</h3>
             <p className="text-gray-500 mb-4">Entre ou registre-se para visualizar suas reservas.</p>
             <Step4RegisterLogin
