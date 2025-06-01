@@ -138,11 +138,13 @@ const CustomDrawer = ({
         left: 0,
         right: 0,
         bottom: 0,
+        margin: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         zIndex: 1050,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: '15px'
+        padding: '15px',
+       
       }}
       onClick={(e) => {
         // Close when clicking the overlay background
@@ -161,7 +163,9 @@ const CustomDrawer = ({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          position: 'relative'
+          position: 'relative',
+        
+         
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -172,6 +176,7 @@ const CustomDrawer = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
+          
         }}>
           <h4 style={{
             margin: 0,
@@ -187,17 +192,20 @@ const CustomDrawer = ({
         
         {/* Body */}
         <div style={{ 
-          padding: '15px', 
+          padding: '20px 24px',
           overflowY: 'auto',
-          maxHeight: 'calc(90vh - 130px)'
+          maxHeight: 'calc(90vh - 130px)',
+          backgroundColor: '#F3F4F6'
         }}>
-          {children}
+          <div className="space-y-6 bg-white border border-gray-200 rounded-lg p-4">
+            {children}
+          </div>
         </div>
         
         {/* Footer */}
         {showFooter && (
           <div style={{
-            padding: '15px 20px',
+            padding: '15px 24px', // Ajustei para manter consistência
             borderTop: '1px solid #e5e5e5',
             display: 'flex',
             flexDirection: isMobile ? 'column-reverse' : 'row',
@@ -213,7 +221,9 @@ const CustomDrawer = ({
                 style={{
                   width: isMobile ? '100%' : undefined,
                   padding: isMobile ? '8px 12px' : undefined,
-                  height: isMobile ? 'auto' : undefined
+                  height: isMobile ? 'auto' : undefined,
+                  border: '1px solid #e2e8f0', // Adicionei borda cinza clara
+                  borderRadius: '6px' // Arredondamento consistente
                 }}
               >
                 {secondaryActionLabel}

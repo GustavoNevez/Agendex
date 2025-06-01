@@ -36,18 +36,25 @@ const INITIAL_STATE = {
 function cliente(state = INITIAL_STATE, action) {
     switch(action.type) {
         case types.UPDATE_CLIENTES: {
-            return produce(state, (draft) => {
-                
-                draft =  { ...draft, ...action.payload};
-                return draft;
-            });     
+            return {
+                ...state,
+                ...action.payload,
+                cliente: {
+                    ...state.cliente,
+                    ...action.payload.cliente
+                },
+                componentes: {
+                    ...state.componentes,
+                    ...action.payload.componentes
+                }
+            };
         }
         case types.RESET_CLIENTE: {
-            return produce(state, (draft) => {
-                
-                draft.cliente = INITIAL_STATE.cliente
-                return draft;
-            });
+            return {
+                ...state,
+                cliente: INITIAL_STATE.cliente,
+                comportamento: action.payload?.comportamento || 'create'
+            };
         }
         default: return state;
     }

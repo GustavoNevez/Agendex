@@ -1,56 +1,91 @@
-import {Button, Icon} from 'rsuite';
+import { Button, Icon, Tag, InputGroup, Input } from 'rsuite';
+import TableHeaderCustom from '../../components/TableHeaderCustom'; // Add this import
+import CustomButton from '../../components/CustomButton'; // Adicione este import
 import CustomModal from '../../components/Modal'; // Import our reusable Modal component
 import CustomDrawer, { MaskedInput } from '../../components/CustomDrawer'; // Import our new CustomDrawer component with MaskedInput
-import Table from '../../components/Table';
+import CustomTable from '../../components/CustomTable';
+import useMediaQuery from '../../hooks/useMediaQuery';
 import 'rsuite/dist/styles/rsuite-default.css';
-import {useEffect, useState} from 'react';
-import {useDispatch, useSelector} from 'react-redux';
-import {allClientes, updateClientes,filterCliente,addCliente, resetCliente,unlinkCliente} from '../../store/modules/cliente/actions';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { allClientes, updateClientes, filterCliente, addCliente, resetCliente, unlinkCliente } from '../../store/modules/cliente/actions';
 import { showSuccessToast } from '../../utils/notifications';
 
 const Clientes = () => {
     const dispatch = useDispatch();
-    const {clientes,cliente, estadoFormulario,componentes,comportamento} = useSelector(state=>state.clientes);
+    const { clientes, cliente, estadoFormulario, componentes, comportamento } = useSelector(state => state.clientes);
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-    
+    const [sortColumn, setSortColumn] = useState();
+    const [sortType, setSortType] = useState();
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [limit, setLimit] = useState(10);
+    const [page, setPage] = useState(1);
+    const isMobile = useMediaQuery('(max-width: 768px)');
+
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-    
+
     const selecionarComponente = (componente, state) => {
         dispatch(updateClientes({
-            componentes: {...componentes, [componente]: state},
+            componentes: { ...componentes, [componente]: state },
         }));
     };
     const selecionarEstado = (componente, state) => {
         dispatch(updateClientes({
-            estadoFormulario: {...estadoFormulario, [componente]: state},
+            estadoFormulario: { ...estadoFormulario, [componente]: state },
         }));
     };
 
     const selecionarCliente = (key, value) => {
+        const updatedCliente = { ...cliente };
+
+        if (key === 'documento') {
+            updatedCliente.documento = {
+                ...updatedCliente.documento || {},
+                ...value
+            };
+        } else if (key === 'endereco') {
+            updatedCliente.endereco = {
+                ...updatedCliente.endereco || {},
+                ...value
+            };
+        } else {
+            updatedCliente[key] = value;
+        }
+
         dispatch(updateClientes({
-            cliente:{...cliente, [key]: value}
-        }))
+            cliente: updatedCliente
+        }));
     }
 
     const onRowClick = (cliente) => {    
         dispatch(
-          updateClientes({
-            cliente,
-            comportamento: 'update',
-          })
+            updateClientes({
+                cliente: {
+                    ...cliente,
+                    documento: cliente.documento || { tipo: 'cpf', numero: '' },
+                    endereco: cliente.endereco || { 
+                        cep: '', 
+                        rua: '', 
+                        numero: '', 
+                        uf: '', 
+                        cidade: '' 
+                    }
+                },
+                comportamento: 'update',
+            })
         );
         
         selecionarComponente('drawer', true);
-      };
-    
+    };
+
 
     const save = () => {
         dispatch(addCliente());
-        selecionarEstado('disabled',true);
+        selecionarEstado('disabled', true);
     }
 
     const remove = () => {
@@ -59,13 +94,96 @@ const Clientes = () => {
     }
     useEffect(() => {
         dispatch(allClientes());
-       
+
     }, [dispatch])
+
+    const getData = () => {
+        if (searchKeyword) {
+            return clientes.filter(item => {
+                return item.nome.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+                    item.email.toLowerCase().includes(searchKeyword.toLowerCase());
+            });
+        }
+        return clientes;
+    };
+
+    const handleSortColumn = (sortColumn, sortType) => {
+        setSortColumn(sortColumn);
+        setSortType(sortType);
+    };
+
+    const filteredData = getData();
+    const total = filteredData.length;
     
+    const sortedData = filteredData
+        .sort((a, b) => {
+            if (sortColumn && sortType) {
+                const x = a[sortColumn];
+                const y = b[sortColumn];
+                if (typeof x === 'string') {
+                    return sortType === 'asc' ? x.localeCompare(y) : y.localeCompare(x);
+                }
+                return sortType === 'asc' ? x - y : y - x;
+            }
+            return 0;
+        })
+        .slice((page - 1) * limit, page * limit);
+
+    const columns = [
+        {
+            key: 'nome',
+            label: 'Nome',
+            width: isMobile ? 200 : 180,
+            sortable: true,
+            render: (value, rowData) => (
+                <div className="flex items-center">
+                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 font-bold">
+                        {value ? value.charAt(0) : '?'}
+                    </div>
+                    <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{value}</div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            key: 'email',
+            label: 'E-mail',
+            width: 200,
+            hideOnMobile: true,
+            sortable: true
+        },
+        {
+            key: 'telefone',
+            label: 'Telefone',
+            width: 150,
+            hideOnMobile: true,
+            sortable: true
+        },
+        {
+            key: 'actions',
+            label: 'Ações',
+            width: isMobile ? 130 : 120,
+            fixed: 'right',
+            render: (_, rowData) => (
+                <CustomButton
+                    label="Ver informações"
+                    appearance="primary"
+                    gradient="primary"
+                    size="xs"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRowClick(rowData);
+                    }}
+                />
+            )
+        }
+    ];
+
     const isSmallScreen = windowWidth < 768;
-    
+
     return (
-        <div className="col p-4 overflow-auto h-100 " style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+        <div className="col p-4 overflow-auto h-100" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
             {/* Client drawer using our reusable CustomDrawer component */}
             <CustomDrawer
                 show={componentes.drawer}
@@ -86,7 +204,7 @@ const Clientes = () => {
                 secondaryActionLabel={comportamento === "create" ? null : "Remover Cliente"}
                 secondaryActionColor="red"
                 onSecondaryAction={
-                    comportamento === "create" 
+                    comportamento === "create"
                         ? null
                         : () => selecionarComponente('confirmDelete', true)
                 }
@@ -103,9 +221,9 @@ const Clientes = () => {
                         backgroundColor: 'white',
                         zIndex: 10
                     }}>
-                        <Button 
-                            block 
-                            color="green" 
+                        <Button
+                            block
+                            color="green"
                             size="md"
                             loading={estadoFormulario.saving}
                             onClick={save}
@@ -119,16 +237,16 @@ const Clientes = () => {
                         </Button>
                     </div>
                 )}
-                
+
                 <div className="row mt-3">
                     <div className="form-group col-12 mb-3">
                         <b>E-mail*</b>
                         <div className="input-group">
-                            <input 
-                                type="email" 
-                                className="form-control" 
-                                placeholder="Email do cliente" 
-                                value={cliente.email} 
+                            <input
+                                type="email"
+                                className="form-control"
+                                placeholder="Email do cliente"
+                                value={cliente.email}
                                 onChange={(e) => {
                                     selecionarCliente('email', e.target.value);
                                 }}
@@ -161,10 +279,10 @@ const Clientes = () => {
                             className="form-control"
                             value={cliente.documento.tipo}
                             onChange={(e) =>
-                            selecionarCliente('documento', {
-                                ...cliente.documento,
-                                tipo: e.target.value,
-                            })}
+                                selecionarCliente('documento', {
+                                    ...cliente.documento,
+                                    tipo: e.target.value,
+                                })}
                         >
                             <option value="cpf">CPF</option>
                             <option value="rg">RG</option>
@@ -178,10 +296,10 @@ const Clientes = () => {
                                 placeholder="000.000.000-00"
                                 value={cliente.documento.numero}
                                 onChange={(e) =>
-                                selecionarCliente('documento', {
-                                    ...cliente.documento,
-                                    numero: e.target.value,
-                                })}
+                                    selecionarCliente('documento', {
+                                        ...cliente.documento,
+                                        numero: e.target.value,
+                                    })}
                                 mask="cpf"
                             />
                         ) : (
@@ -191,10 +309,10 @@ const Clientes = () => {
                                 placeholder="Número do documento"
                                 value={cliente.documento.numero}
                                 onChange={(e) =>
-                                selecionarCliente('documento', {
-                                    ...cliente.documento,
-                                    numero: e.target.value,
-                                })}
+                                    selecionarCliente('documento', {
+                                        ...cliente.documento,
+                                        numero: e.target.value,
+                                    })}
                             />
                         )}
                     </div>
@@ -206,10 +324,10 @@ const Clientes = () => {
                             placeholder="000000-00"
                             value={cliente.endereco.cep}
                             onChange={(e) =>
-                            selecionarCliente('endereco', {
-                                ...cliente.endereco,
-                                cep: e.target.value,
-                            })}
+                                selecionarCliente('endereco', {
+                                    ...cliente.endereco,
+                                    cep: e.target.value,
+                                })}
                         />
                     </div>
                     <div className="form-group col-6">
@@ -220,10 +338,10 @@ const Clientes = () => {
                             placeholder="Av. Exemplo"
                             value={cliente.endereco.rua}
                             onChange={(e) =>
-                            selecionarCliente('endereco', {
-                                ...cliente.endereco,
-                                rua: e.target.value,
-                            })}
+                                selecionarCliente('endereco', {
+                                    ...cliente.endereco,
+                                    rua: e.target.value,
+                                })}
                         />
                     </div>
                     <div className="form-group col-3">
@@ -234,10 +352,10 @@ const Clientes = () => {
                             placeholder="0"
                             value={cliente.endereco.numero}
                             onChange={(e) =>
-                            selecionarCliente('endereco', {
-                                ...cliente.endereco,
-                                numero: e.target.value,
-                            })}
+                                selecionarCliente('endereco', {
+                                    ...cliente.endereco,
+                                    numero: e.target.value,
+                                })}
                         />
                     </div>
                     <div className="form-group col-3">
@@ -248,10 +366,10 @@ const Clientes = () => {
                             placeholder="Parana"
                             value={cliente.endereco.uf}
                             onChange={(e) =>
-                            selecionarCliente('endereco', {
-                                ...cliente.endereco,
-                                uf: e.target.value,
-                            })}
+                                selecionarCliente('endereco', {
+                                    ...cliente.endereco,
+                                    uf: e.target.value,
+                                })}
                         />
                     </div>
                     <div className="form-group col-9">
@@ -262,15 +380,15 @@ const Clientes = () => {
                             placeholder="Cidade"
                             value={cliente.endereco.cidade}
                             onChange={(e) =>
-                            selecionarCliente('endereco', {
-                                ...cliente.endereco,
-                                cidade: e.target.value,
-                            })}
+                                selecionarCliente('endereco', {
+                                    ...cliente.endereco,
+                                    cidade: e.target.value,
+                                })}
                         />
                     </div>
                 </div>
             </CustomDrawer>
-            
+
             {/* Confirmation Modal using CustomModal */}
             <CustomModal
                 show={componentes.confirmDelete}
@@ -295,96 +413,43 @@ const Clientes = () => {
             </CustomModal>
             <div className="row">
                 <div className="col-12">
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-5">
-                        <div className="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
-                            <h2 className="font-semibold text-gray-800 mb-0">Clientes</h2>
-                            <button 
-                                className="text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-md"
-                                onClick={() => {
-                                    dispatch(updateClientes({
-                                        comportamento: 'create',
-                                    }));
-                                    selecionarComponente('drawer', true);
-                                }}
-                            >
-                                <span className="mdi mdi-plus">Novo Cliente</span>
-                            </button>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Nome
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            E-mail
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Telefone
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ações
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {estadoFormulario.filtering ? (
-                                        <tr>
-                                            <td colSpan="4" className="px-6 py-4 text-center">
-                                                <Icon icon="spinner" spin /> Carregando...
-                                            </td>
-                                        </tr>
-                                    ) : componentes.drawer ? (
-                                        <tr>
-                                            <td colSpan="4" className="px-6 py-4 text-center">
-                                                <Icon icon="spinner" spin /> Carregando...
-                                            </td>
-                                        </tr>
-                                    ) : clientes.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="4" className="px-6 py-4 text-center">
-                                                Nenhum cliente cadastrado!
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        clientes.map(cliente => (
-                                            <tr key={cliente.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => onRowClick(cliente)}>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 font-bold">
-                                                            {cliente.nome ? cliente.nome.charAt(0) : '?'}
-                                                        </div>
-                                                        <div className="ml-4">
-                                                            <div className="text-sm font-medium text-gray-900">{cliente.nome}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{cliente.email}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{cliente.telefone}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <Button color="blue" size="xs" onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onRowClick(cliente);
-                                                    }}>
-                                                        Ver informações
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-5 border border-gray-200">
+                        <TableHeaderCustom 
+                            title="Clientes"
+                            searchPlaceholder="Buscar por nome ou email..."
+                            searchKeyword={searchKeyword}
+                            onSearchChange={setSearchKeyword}
+                            buttonLabel="Adicionar cliente"
+                            buttonIcon="plus"
+                            isMobile={isMobile}
+                            onButtonClick={() => {
+                                dispatch(updateClientes({
+                                    comportamento: 'create',
+                                }));
+                                selecionarComponente('drawer', true);
+                            }}
+                        />
+                        <CustomTable
+                            data={sortedData}
+                            columns={columns}
+                            loading={estadoFormulario.filtering || componentes.drawer}
+                            sortColumn={sortColumn}
+                            sortType={sortType}
+                            onSortColumn={handleSortColumn}
+                            onRowClick={onRowClick}
+                            isMobile={isMobile}
+                            page={page}
+                            limit={limit}
+                            total={total}
+                            onChangePage={setPage}
+                            onChangeLimit={setLimit}
+                            rowHeight={isMobile ? 50 : 60}
+                        />
                     </div>
                 </div>
             </div>
         </div>
-    )
+    );
 };
 
 

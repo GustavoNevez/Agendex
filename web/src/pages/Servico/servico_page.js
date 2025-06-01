@@ -1,16 +1,29 @@
-import { Button, Icon, Tag, DatePicker } from 'rsuite';
+import { Button, Icon, Tag, DatePicker, InputGroup, Input } from 'rsuite';
+import CustomTable from '../../components/CustomTable';
 import CustomModal from '../../components/Modal'; // Import our reusable Modal component
 import CustomDrawer from '../../components/CustomDrawer'; // Import our new CustomDrawer component
+import CustomButton from '../../components/CustomButton';
 import moment from 'moment';
 import 'rsuite/dist/styles/rsuite-default.css';
-import { useEffect } from 'react';
+import 'rsuite-table/dist/css/rsuite-table.css';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { allServicos, updateServico, addServico, resetServico, removeServico, saveServicos } from '../../store/modules/servico/actions';
 import {  showSuccessToast } from '../../utils/notifications';
+import useMediaQuery from '../../hooks/useMediaQuery'; // Add this import
+import TableHeaderCustom from '../../components/TableHeaderCustom';
 
 const Servicos = () => {
     const dispatch = useDispatch();
     const { servicos, servico, estadoFormulario, componentes, comportamento } = useSelector(state => state.servico);
+
+    const [limit, setPage] = useState(10);
+    const [page, setLimit] = useState(1);
+    const [sortColumn, setSortColumn] = useState();
+    const [sortType, setSortType] = useState();
+    const [searchKeyword, setSearchKeyword] = useState('');
+
+    const isMobile = useMediaQuery('(max-width: 768px)');
 
     const selecionarComponente = (componente, state) => {
         dispatch(updateServico({
@@ -55,9 +68,102 @@ const Servicos = () => {
         dispatch(allServicos());
     }, [dispatch]);
 
+    const getData = () => {
+        if (searchKeyword) {
+            return servicos.filter(item => {
+                return item.titulo.toLowerCase().includes(searchKeyword.toLowerCase());
+            });
+        }
+        return servicos;
+    };
+
+    const filteredData = getData();
+    const total = filteredData.length;
+    
+    // Paginação dos dados
+    const paginatedData = filteredData
+        .sort((a, b) => {
+            if (sortColumn && sortType) {
+                const x = a[sortColumn];
+                const y = b[sortColumn];
+                if (typeof x === 'string') {
+                    return sortType === 'asc' ? x.localeCompare(y) : y.localeCompare(x);
+                }
+                return sortType === 'asc' ? x - y : y - x;
+            }
+            return 0;
+        })
+        .slice((page - 1) * limit, page * limit);
+
+    const handleSortColumn = (sortColumn, sortType) => {
+        setSortColumn(sortColumn);
+        setSortType(sortType);
+    };
+
+    const columns = [
+        {
+            key: 'titulo',
+            label: 'Título',
+            width: isMobile ? 180 : 180,
+            sortable: true
+        },
+        {
+            key: 'preco',
+            label: 'Preço',
+            width: 120,
+            hideOnMobile: true,
+            sortable: true,
+            render: (value) => `R$ ${parseFloat(value).toFixed(2)}`
+        },
+        {
+            key: 'recorrencia',
+            label: 'Recorrência',
+            width: 120,
+            hideOnMobile: true,
+            sortable: true
+        },
+        {
+            key: 'duracao',
+            label: 'Duração',
+            width: 120,
+            hideOnMobile: true,
+            sortable: true,
+            render: (value) => value ? moment(value).format('HH:mm') : 'N/A'
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            width: 100,
+            hideOnMobile: true,
+            sortable: true,
+            render: (value) => (
+                <Tag color={value === 'A' ? 'green' : 'red'}>
+                    {value === 'A' ? 'Ativo' : 'Inativo'}
+                </Tag>
+            )
+        },
+        {
+            key: 'actions',
+            label: 'Ações',
+            width: isMobile ? 130 : 120,
+            fixed: 'right',
+            render: (_, rowData) => (
+                <CustomButton
+                    label="Ver informações"
+                    appearance="primary"
+                    gradient="primary"
+                    size="xs"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRowClick(rowData);
+                    }}
+                />
+            )
+        }
+    ];
 
     return (
-        <div className="col p-4 overflow-auto h-100  " style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+        <div className="col p-4 overflow-auto h-100 " style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
             {/* Service drawer using our reusable CustomDrawer component */}
             <CustomDrawer
                 show={componentes.drawer}
@@ -218,108 +324,38 @@ const Servicos = () => {
             </CustomModal>
             <div className="row">
                 <div className="col-12">
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-5">
-                        <div className="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
-                            <h2 className="font-semibold text-gray-800 mb-0">Serviços</h2>
-                            <button 
-                                className="text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-md"
-                                onClick={() => {
-                                    dispatch(updateServico({
-                                        comportamento: 'create',
-                                    }));
-                                    dispatch(resetServico({
-                                        comportamento: 'create',
-                                    }));
-                                    selecionarComponente('drawer', true);
-                                }}
-                            >
-                                <span className="mdi mdi-plus">Novo serviço</span>
-                            </button>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Título
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Preço
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Recorrência (dias)
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Duração
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Status
-                                        </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ações
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {estadoFormulario.filtering ? (
-                                        <tr>
-                                            <td colSpan="6" className="px-6 py-4 text-center">
-                                                <Icon icon="spinner" spin /> Carregando...
-                                            </td>
-                                        </tr>
-                                    ) : componentes.drawer ? (
-                                        <tr>
-                                            <td colSpan="6" className="px-6 py-4 text-center">
-                                                <Icon icon="spinner" spin /> Carregando...
-                                            </td>
-                                        </tr>
-                                    ) : servicos.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="6" className="px-6 py-4 text-center">
-                                                Nenhum serviço cadastrado!
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        servicos.map(servico => (
-                                            <tr key={servico.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => onRowClick(servico)}>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 font-bold">
-                                                            {servico.titulo ? servico.titulo.charAt(0) : '?'}
-                                                        </div>
-                                                        <div className="ml-4">
-                                                            <div className="text-sm font-medium text-gray-900">{servico.titulo}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">R$ {parseFloat(servico.preco).toFixed(2)}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{servico.recorrencia}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{servico.duracao ? moment(servico.duracao).format('HH:mm') : 'N/A'}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${servico.status === 'A' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                                        {servico.status === 'A' ? 'Ativo' : 'Inativo'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <Button color="blue" size="xs" onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onRowClick(servico);
-                                                    }}>
-                                                        Ver informações
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-5 border border-gray-200">
+                        <TableHeaderCustom 
+                            title="Serviços"
+                            searchPlaceholder="Buscar por título..."
+                            searchKeyword={searchKeyword}
+                            onSearchChange={setSearchKeyword}
+                            buttonLabel="Adicionar serviço"
+                            buttonIcon="plus"
+                            isMobile={isMobile}
+                            onButtonClick={() => {
+                                dispatch(updateServico({ comportamento: 'create' }));
+                                dispatch(resetServico({ comportamento: 'create' }));
+                                selecionarComponente('drawer', true);
+                            }}
+                        />
+                        <CustomTable
+                            data={paginatedData}
+                            columns={columns}
+                            loading={estadoFormulario.filtering}
+                            sortColumn={sortColumn}
+                            sortType={sortType}
+                            onSortColumn={handleSortColumn}
+                            onRowClick={onRowClick}
+                            isMobile={isMobile}
+                            page={page}
+                            limit={limit}
+                            total={total}
+                            onChangePage={setPage}
+                            onChangeLimit={setLimit}
+                            rowHeight={isMobile ? 50 : 60}
+                            
+                        />
                     </div>
                 </div>
             </div>
