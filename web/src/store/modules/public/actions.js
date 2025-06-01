@@ -63,3 +63,11 @@ export function loginClient(loginData) {
         loginData,
     };
 }
+
+export function deleteClientAppointment({ customLink, id }) {
+    return {
+        type: types.DELETE_CLIENT_APPOINTMENT,
+        customLink,
+        id,
+    };
+}

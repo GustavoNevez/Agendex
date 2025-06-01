@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Button, Icon } from 'rsuite';
+import { Button, Icon, IconButton } from 'rsuite';
 import moment from 'moment';
 import Step4RegisterLogin from './Step4RegisterLogin';
 import Step5VerificationConfirmation from './Step5VerificationConfirmation';
+import AppointmentCard from '../../../components/AppointmentCard';
+import CustomModal from '../../../components/Modal';
+import CustomDrawer from '../../../components/CustomDrawer';
 import {
     registerClient,
     verifyClient,
     loginClient,
     fetchClientAppointments,
+    updateClientRegistration,
+    deleteClientAppointment
 } from '../../../store/modules/public/actions';
 
 function maskPhone(value) {
@@ -46,12 +51,31 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
     const [isVerifyingSms, setIsVerifyingSms] = useState(false);
     const [verificationStep, setVerificationStep] = useState(1);
 
+    // Modal de detalhes do agendamento
+    const [selectedReservation, setSelectedReservation] = useState(null);
+    const [showReservationModal, setShowReservationModal] = useState(false);
+    const [canceling, setCanceling] = useState(false);
+    const [cancelError, setCancelError] = useState('');
+
     // Busca agendamentos se logado
     useEffect(() => {
         if (clientRegistration.userToken && customLink) {
             dispatch(fetchClientAppointments({ customLink }));
         }
     }, [clientRegistration.userToken, customLink, dispatch]);
+
+    // Garante que userToken está setado após login/registro bem-sucedido
+    useEffect(() => {
+        if (
+            clientRegistration &&
+            clientRegistration.success === true &&
+            clientRegistration.step === 3 &&
+            !clientRegistration.userToken
+        ) {
+            // Atualiza o Redux para garantir que userToken está true
+            dispatch(updateClientRegistration({ userToken: true }));
+        }
+    }, [clientRegistration, dispatch]);
 
     // Controle de steps de verificação
     useEffect(() => {
@@ -150,8 +174,38 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
         }
     };
 
-    // Só renderiza o formulário se NÃO estiver logado
-    if (clientRegistration.userToken) {
+    // Handler para abrir modal
+    const handleOpenReservationModal = (reservation) => {
+        if (!reservation) return;
+        setSelectedReservation(reservation);
+        setShowReservationModal(true);
+        setCancelError('');
+    };
+
+    // Handler para fechar modal
+    const handleCloseReservationModal = () => {
+        setShowReservationModal(false);
+        setSelectedReservation(null);
+        setCancelError('');
+    };
+
+    // Handler para cancelar agendamento
+    const handleCancelReservation = async () => {
+        if (!selectedReservation || !selectedReservation.id) return;
+        setCanceling(true);
+        setCancelError('');
+        try {
+            await dispatch(deleteClientAppointment({ customLink, id: selectedReservation.id }));
+            setShowReservationModal(false);
+        } catch (err) {
+            setCancelError('Erro ao cancelar agendamento.');
+        } finally {
+            setCanceling(false);
+        }
+    };
+
+    // Sempre priorize o estado global de login
+    if (clientRegistration && clientRegistration.userToken) {
         // Mostra apenas os agendamentos, sem formulário de login/registro
         return (
             <div className="bg-gray-50 min-h-full p-4 lg:flex lg:justify-center">
@@ -160,88 +214,11 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
                     {clientAppointments && clientAppointments.length > 0 ? (
                         <div className="grid gap-6 sm:grid-cols-2">
                             {clientAppointments.map((reservation, idx) => (
-                                <div
+                                <AppointmentCard
                                     key={reservation.id || idx}
-                                    className="bg-white p-6 rounded-2xl border border-violet-100 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-full"
-                                    style={{ minHeight: 220 }}
-                                >
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-full bg-violet-50 flex items-center justify-center border border-violet-100">
-                                            <Icon icon="calendar" className="text-violet-600" style={{ fontSize: 26 }} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-bold text-gray-800 leading-tight">
-                                                {reservation.servicoNome || reservation.servico || ''}
-                                            </h3>
-                                            <p className="text-gray-500 text-sm">
-                                                com <span className="font-semibold text-violet-700">
-                                                    {reservation.profissionalNome || reservation.profissional || ''}
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2 text-sm mb-3">
-                                        <div className="flex flex-col items-start">
-                                            <span className="text-gray-400 font-medium flex items-center gap-1">
-                                                <Icon icon="calendar-o" className="text-violet-400" /> Data
-                                            </span>
-                                            <span className="font-semibold text-violet-700">
-                                                {moment(reservation.data).format('DD/MM/YYYY')}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col items-start">
-                                            <span className="text-gray-400 font-medium flex items-center gap-1">
-                                                <Icon icon="clock-o" className="text-violet-400" /> Horário
-                                            </span>
-                                            <span className="font-semibold text-violet-700">
-                                                {reservation.horario || moment(reservation.data).format('HH:mm')}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col items-start">
-                                            <span className="text-gray-400 font-medium flex items-center gap-1">
-                                                <Icon icon="money" className="text-orange-400" /> Valor
-                                            </span>
-                                            <span className="font-semibold text-orange-600">
-                                                R$ {typeof reservation.valor === 'number'
-                                                    ? reservation.valor.toFixed(2)
-                                                    : (typeof reservation.servicoPreco === 'number'
-                                                        ? reservation.servicoPreco.toFixed(2)
-                                                        : '0,00')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-auto">
-                                        <span className={`
-                                            px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1
-                                            ${reservation.status === 'confirmado'
-                                                ? 'bg-green-50 text-green-700 border border-green-200'
-                                                : reservation.status === 'pendente'
-                                                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                                                    : 'bg-gray-50 text-gray-700 border border-gray-200'
-                                            }
-                                        `}>
-                                            <Icon
-                                                icon={
-                                                    reservation.status === 'confirmado'
-                                                        ? 'check-circle'
-                                                        : reservation.status === 'pendente'
-                                                            ? 'hourglass-2'
-                                                            : 'info-circle'
-                                                }
-                                                className={
-                                                    reservation.status === 'confirmado'
-                                                        ? 'text-green-500'
-                                                        : reservation.status === 'pendente'
-                                                            ? 'text-yellow-500'
-                                                            : 'text-gray-400'
-                                                }
-                                            />
-                                            {reservation.status
-                                                ? reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)
-                                                : 'Confirmado'}
-                                        </span>
-                                    </div>
-                                </div>
+                                    reservation={reservation}
+                                    onClick={handleOpenReservationModal}
+                                />
                             ))}
                         </div>
                     ) : (
@@ -252,6 +229,82 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
                             <h3 className="text-xl font-semibold mb-2 text-gray-700">Nenhuma reserva encontrada</h3>
                             <p className="text-gray-500 mb-4">Você ainda não possui agendamentos realizados.</p>
                         </div>
+                    )}
+
+                    {/* DRAWER DE DETALHES DO AGENDAMENTO */}
+                    {selectedReservation && (
+                        <CustomDrawer
+                            show={showReservationModal}
+                            onClose={handleCloseReservationModal}
+                            title="Detalhes do Agendamento"
+                            primaryActionLabel="Cancelar Agendamento"
+                            primaryActionColor="red"
+                            primaryActionDisabled={canceling || (selectedReservation?.status === 'cancelado')}
+                            onPrimaryAction={handleCancelReservation}
+                            loading={canceling}
+                            secondaryActionLabel="Fechar"
+                            size="md"
+                        >
+                            <div className="space-y-6 ">
+                                   
+                                    <div>
+                                        <span className="block text-gray-400 text-sm mb-1">Serviço</span>
+                                        <span className="font-semibold text-gray-800 text-lg">
+                                            {selectedReservation.servicoNome || selectedReservation.servico || ''}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-gray-400 text-sm mb-1">Profissional</span>
+                                        <span className="font-semibold text-gray-800 text-lg">
+                                            {selectedReservation.profissionalNome || selectedReservation.profissional || ''}
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-8">
+                                        <div>
+                                            <span className="block text-gray-400 text-sm mb-1">Data</span>
+                                            <span className="font-semibold text-violet-700 text-lg">
+                                                {moment(selectedReservation.data).format('DD/MM/YYYY')}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="block text-gray-400 text-sm mb-1">Horário</span>
+                                            <span className="font-semibold text-violet-700 text-lg">
+                                                {selectedReservation.horario || moment(selectedReservation.data).format('HH:mm')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className="block text-gray-400 text-sm mb-1">Valor</span>
+                                        <span className="font-semibold text-orange-600 text-xl">
+                                            R$ {typeof selectedReservation.valor === 'number'
+                                                ? selectedReservation.valor.toFixed(2)
+                                                : (typeof selectedReservation.servicoPreco === 'number'
+                                                    ? selectedReservation.servicoPreco.toFixed(2)
+                                                    : '0,00')}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="block text-gray-400 text-sm mb-1">Status</span>
+                                        <span className={`inline-block font-bold px-3 py-1 rounded-full text-sm
+                                            ${selectedReservation.status === 'confirmado'
+                                                ? 'bg-green-50 text-green-700 border border-green-200'
+                                                : selectedReservation.status === 'pendente'
+                                                    ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                                                    : 'bg-gray-50 text-gray-700 border border-gray-200'
+                                            }
+                                        `}>
+                                            {selectedReservation.status
+                                                ? selectedReservation.status.charAt(0).toUpperCase() + selectedReservation.status.slice(1)
+                                                : 'Confirmado'}
+                                        </span>
+                                    </div>
+                                    {cancelError && (
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                            <p className="text-red-600 text-sm">{cancelError}</p>
+                                        </div>
+                                    )}
+                            </div>
+                        </CustomDrawer>
                     )}
                 </div>
             </div>

@@ -595,8 +595,8 @@ const PublicScheduling = () => {
                         onClick={() => {
                             if (submitting) return;
                             setSubmitting(true);
-                            // CORRIGIDO: só vai para step 5 se estiver logado, senão vai para step 4 (login/registro)
-                            if (clientRegistration && clientRegistration.userToken === true &&  lastAppointmentCreated !== null) {
+                            // Se já está logado, vá direto para step 5 (confirmação)
+                            if (clientRegistration && clientRegistration.userToken === true) {
                                 setStep(5);
                                 setVerificationStep(3);
                             } else {

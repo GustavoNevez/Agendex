@@ -3,48 +3,64 @@ import types from './types';
 import moment from 'moment';
 
 const INITIAL_STATE = {
-    comportamento:'create',
-    componentes:{
-        drawer:false,
-        confirmDelete:false,
-        confirmUpdate:false,
-    },
-    estadoFormulario:{
-        filtereing:false,
-        disabled:true,
-        saving:false,
-    },
-    servicos: [],
     servico: {
-        estabelecimentoId: '',
-        id:'',
         titulo: '',
         preco: '',
-        duracao: moment('00:30', 'HH:mm').format(),
         recorrencia: '',
+        duracao: '',
         status: 'A',
-        
-      },
+        descricao: ''
+    },
+    servicos: [],
+    componentes: {
+        drawer: false,
+        confirmDelete: false,
+        confirmUpdate: false
+    },
+    estadoFormulario: {
+        saving: false,
+        filtering: false
+    },
+    comportamento: 'create'
 };
 
-function servico(state = INITIAL_STATE, action) {
-    switch(action.type) {
-        case types.UPDATE_SERVICOS: {
-            return produce(state, (draft) => {
-                
-                draft =  { ...draft, ...action.payload};
-                return draft;
-            });     
-        }
-        case types.RESET_SERVICOS: {
-            return produce(state, (draft) => {
-                
-                draft.servico = INITIAL_STATE.servico
-                return draft;
-            });
-        }
-        default: return state;
-    }
-}
+const servicoReducer = (state = INITIAL_STATE, action) => {
+    switch (action.type) {
+        case '@servico/UPDATE_SERVICO':
+            return {
+                ...state,
+                ...action.payload,
+                servico: {
+                    ...state.servico,
+                    ...action.payload.servico
+                },
+                componentes: {
+                    ...state.componentes,
+                    ...action.payload.componentes
+                }
+            };
 
-export default servico;
+        case '@servico/ADD_SERVICO':
+            return {
+                ...state,
+                servicos: [...state.servicos, {...state.servico}],
+                servico: INITIAL_STATE.servico,
+                componentes: {
+                    ...state.componentes,
+                    drawer: false
+                }
+            };
+
+        case '@servico/RESET_SERVICO':
+            return {
+                ...state,
+                servico: INITIAL_STATE.servico,
+                comportamento: action.payload?.comportamento || 'create'
+            };
+
+        default:
+            return state;
+    }
+};
+
+export default servicoReducer;

@@ -4,18 +4,19 @@ export function allServicos() {
     return {type: types.ALL_SERVICOS};
 }
 
-export function updateServico(payload) {
-    return {type: types.UPDATE_SERVICOS, payload};
-}
+export const updateServico = (payload) => ({
+    type: '@servico/UPDATE_SERVICO',
+    payload: { ...payload }
+});
 
+export const addServico = () => ({
+    type: '@servico/ADD_SERVICO'
+});
 
-export function addServico() {
-    return {type: types.ADD_SERVICOS};
-}
-
-export function resetServico() {
-    return {type: types.RESET_SERVICOS};
-}
+export const resetServico = (payload) => ({
+    type: '@servico/RESET_SERVICO',
+    payload: payload ? { ...payload } : undefined
+});
 
 export function removeServico() {
     return {type: types.REMOVE_SERVICOS};

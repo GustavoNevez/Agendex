@@ -64,7 +64,6 @@ const Modal = ({
     margin: '0 auto',
     borderRadius: '0.5rem',
     border: 'none',
-    overflow: 'hidden',
     
   };
 
@@ -136,14 +135,16 @@ const Modal = ({
         </RsuiteModal.Title>
       </RsuiteModal.Header>
 
-      <RsuiteModal.Body style={{ 
-        padding: isMobile ? '8px 12px' : '10px 14px',
-        fontSize: isMobile ? '0.85rem' : '0.9rem',
-        color: '#4a5568',
-        maxHeight: '60vh',
-        overflowY: 'auto',
-      }}>
-        {children}
+      <RsuiteModal.Body 
+        style={{ 
+          padding: isMobile ? '8px 12px' : '10px 14px',
+          fontSize: isMobile ? '0.85rem' : '0.9rem',
+          color: '#4a5568',
+          maxHeight: '60vh',
+          overflowY: 'auto'
+        }}
+      >
+        <div>{children}</div>
       </RsuiteModal.Body>
 
       {showFooter && (
@@ -281,7 +282,7 @@ Modal.propTypes = {
   /** Modal title */
   title: PropTypes.string.isRequired,
   /** Modal content */
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,  // Changed from .isRequired to optional
   /** Modal size: 'xs', 'sm', 'md', 'lg' */
   size: PropTypes.string,
   /** Label for the primary action button */

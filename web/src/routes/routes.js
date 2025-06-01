@@ -8,7 +8,7 @@ import Agendamentos from '../pages/Agendamentos/agendamentos_page';
 import Cliente from '../pages/Clientes/cliente_page';
 import Servicos from '../pages/Servico/servico_page';
 import Relatorio from '../pages/Relatorio/relatorio_page';
-import Profissionais from '../pages/Profissionais/profissionais_page';
+import Profissionais from '../pages/Profissionais/profissional_view';
 import Horarios from '../pages/Horarios/horarios_page';
 import Registro from '../pages/Registro/registro_page';
 import Login from '../pages/Login/login_page';

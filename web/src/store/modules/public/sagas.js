@@ -151,7 +151,7 @@ function* deleteClientAppointment({ customLink, id }) {
     try {
         const { data: response } = yield call(
             api.delete,
-            `/public-private/e/agendamento/${id}`,
+            `/public-private/e/${customLink}/agendamento/${id}`,
             { withCredentials: true }
         );
         if (response.error) {
