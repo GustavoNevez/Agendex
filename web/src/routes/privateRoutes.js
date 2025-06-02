@@ -1,11 +1,11 @@
 import React, { useContext } from "react";
 import { Route, Redirect } from "react-router-dom";
-import { AuthContext } from "../context/auth";
+import { AuthContext } from "../context/auth_provider";
 import AuthenticatedLayout from "../components/Layout/AuthenticatedLayout";
 
 /**
  * Componente de rota privada que verifica autenticação e aplica o layout autenticado
- * 
+ *
  * Este componente:
  * 1. Verifica se o usuário está autenticado
  * 2. Redireciona para login se não estiver autenticado
@@ -17,7 +17,7 @@ const PrivateRoute = ({ component: Component, ...rest }) => {
   return (
     <Route
       {...rest}
-      render={props =>
+      render={(props) =>
         signed ? (
           <AuthenticatedLayout>
             <Component {...props} />

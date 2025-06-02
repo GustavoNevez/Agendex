@@ -1,27 +1,26 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import PrivateRoute from './privateRoutes';
-import NotFound from '../components/NotFound';
+import React from "react";
+import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
+import PrivateRoute from "./privateRoutes";
+import NotFound from "../components/NotFound/notfound_custom";
 
 // Páginas
-import Agendamentos from '../pages/Agendamentos/agendamentos_page';
-import Cliente from '../pages/Clientes/cliente_page';
-import Servicos from '../pages/Servico/servico_page';
-import Relatorio from '../pages/Relatorio/relatorio_page';
-import Profissionais from '../pages/Profissionais/profissional_view';
-import Horarios from '../pages/Horarios/horarios_page';
-import Registro from '../pages/Registro/registro_page';
-import Login from '../pages/Login/login_page';
-import Dashboard from '../pages/Dashboard/dashboard_page';
-import LinksManagement from '../pages/LinksManagement/links_page';
-import PublicScheduling from '../pages/PublicScheduling/public_page';
-import SMSVerification from '../pages/SMSVerification/sms_page';
+import Agendamentos from "../pages/Schedule/schedule_view";
+import Cliente from "../pages/Client/client_view";
+import Servicos from "../pages/Service/service_view";
 
-import '../styles.css';
+import Profissionais from "../pages/Professional/professional_view";
+import Horarios from "../pages/Shift/shift_view";
+import Registro from "../pages/Register/register_view";
+import Login from "../pages/Login/login_view";
+import Dashboard from "../pages/Report/report_view";
+import LinksManagement from "../pages/LinksManagement/link_view";
+import PublicScheduling from "../pages/PublicScheduling/public_view";
+
+import "../styles/styles.css";
 
 /**
  * Componente principal de rotas da aplicação
- * 
+ *
  * Esta implementação:
  * 1. Remove completamente as referências aos componentes antigos (Sidebar, Header)
  * 2. Usa o PrivateRoute atualizado que já inclui o layout autenticado com componentes responsivos
@@ -35,22 +34,20 @@ const Routers = () => {
           <PrivateRoute path="/agendamentos" exact component={Agendamentos} />
           <PrivateRoute path="/dashboard" exact component={Dashboard} />
           <PrivateRoute path="/servico" exact component={Servicos} />
-          <PrivateRoute path="/relatorio" exact component={Relatorio} />
           <PrivateRoute path="/profissionais" exact component={Profissionais} />
           <PrivateRoute path="/horarios" exact component={Horarios} />
           <PrivateRoute path="/cliente" exact component={Cliente} />
           <PrivateRoute path="/links" exact component={LinksManagement} />
-          
+
           {/* Rotas públicas */}
           <Route path="/registro" exact component={Registro} />
           <Route path="/login" exact component={Login} />
           <Route path="/" exact component={Login} />
-          <Route path="/verificacao-sms" exact component={SMSVerification} />
-          
+
           {/* Rotas públicas para agendamento via links personalizados */}
           <Route path="/public/e/:customLink" component={PublicScheduling} />
           <Route path="/public/p/:customLink" component={PublicScheduling} />
-          
+
           {/* Rota de fallback */}
           <Route component={NotFound} />
         </Switch>
