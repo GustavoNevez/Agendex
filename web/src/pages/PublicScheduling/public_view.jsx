@@ -22,6 +22,8 @@ import Step4RegisterLogin from "./steps/Step4RegisterLogin";
 import Step5VerificationConfirmation from "./steps/Step5VerificationConfirmation";
 import Step6Success from "./steps/Step6Success";
 import StepAuthAndReservations from "./steps/StepAuthAndReservations";
+import iconeAgenda3d from "../../assets/icone_agenda_3d.png";
+import iconeHorario3d from "../../assets/icone_horario_3d.png";
 
 moment.locale("pt-br");
 
@@ -39,6 +41,24 @@ function formatPhoneToSend(value) {
 }
 const adjustTimeToServer = (localTime) =>
   moment(localTime).subtract(3, "hours");
+
+// Função utilitária para exibir endereço (sem CEP e estado)
+function enderecoToString(endereco) {
+  if (!endereco || typeof endereco !== "object") return "";
+  return `${endereco.rua || ""}, ${endereco.numero || ""} - ${
+    endereco.bairro || ""
+  }, ${endereco.cidade || ""}`;
+}
+
+// Função utilitária para buscar no maps (usa tudo: rua, número, bairro, cidade, estado, cep)
+function enderecoCompletoParaMaps(endereco) {
+  if (!endereco || typeof endereco !== "object") return "";
+  return `${endereco.rua || ""}, ${endereco.numero || ""} - ${
+    endereco.bairro || ""
+  }, ${endereco.cidade || ""} - ${endereco.estado || ""}, ${
+    endereco.cep || ""
+  }`;
+}
 
 // Main Component
 const PublicScheduling = () => {
@@ -76,6 +96,7 @@ const PublicScheduling = () => {
   const [triedSubmitRegister, setTriedSubmitRegister] = useState(false);
   const [triedSubmitLogin, setTriedSubmitLogin] = useState(false);
   const [hasFetchedAvailability, setHasFetchedAvailability] = useState(null);
+  const [fotoLoaded, setFotoLoaded] = useState(false);
 
   // --- Step Control Flag ---
   const allowStep5Ref = useRef(true);
@@ -520,12 +541,22 @@ const PublicScheduling = () => {
 
   const renderHomeScreen = () => (
     <div className="p-4 flex flex-col items-center h-full bg-gray-50 overflow-y-auto lg:justify-center lg:min-h-[80vh]">
-      {/* Imagem de perfil */}
-      <div className="mt-6 mb-4">
+      {/* Imagem de perfil dinâmica */}
+      <div className="mt-6 mb-4 relative w-32 h-32 flex items-center justify-center">
+        {!fotoLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
         <img
-          src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.0.3"
+          src={publicData.estabelecimento?.foto}
           alt="Perfil"
-          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md"
+          className={`w-32 h-32 rounded-full object-cover border-4 border-white shadow-md transition-opacity duration-300 ${
+            fotoLoaded ? "opacity-100" : "opacity-0"
+          }`}
+          onLoad={() => setFotoLoaded(true)}
+          onError={() => setFotoLoaded(true)}
+          style={{ background: "#f3f3f3" }}
         />
       </div>
       {/* Nome */}
@@ -533,30 +564,31 @@ const PublicScheduling = () => {
         {publicData.estabelecimento?.nome}
       </h1>
       {/* Localização */}
-      <div className="flex items-center justify-center gap-2 text-gray-600 text-sm mb-4">
-        <Icon icon="map-marker" className="text-violet-700" />
-        <span>
-          {publicData.estabelecimento?.endereco} Rua Saldanha Marinhao 2341{" "}
-        </span>
+      <div className="flex items-center justify-center gap-2 text-gray-600 text-sm mb-4 sm:text-base mb-4 text-center flex-wrap">
+        <span>{enderecoToString(publicData.estabelecimento?.endereco)}</span>
       </div>
       {/* Botões: WhatsApp + Maps */}
       <div className="flex gap-4 mb-4">
         <a
-          href={`https://wa.me/${publicData.estabelecimento?.telefone || ""}`}
+          href={`https://wa.me/${(
+            publicData.estabelecimento?.telefone || ""
+          ).replace(/\D/g, "")}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-full shadow hover:bg-green-600 transition"
+          style={{ textDecoration: "none", outline: "none", boxShadow: "none" }}
         >
           <Icon icon="whatsapp" />
           WhatsApp
         </a>
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-            publicData.estabelecimento?.endereco || ""
+            enderecoCompletoParaMaps(publicData.estabelecimento?.endereco)
           )}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 px-4 py-2 bg-violet-700 text-white rounded-full shadow hover:bg-violet-600 transition"
+          style={{ textDecoration: "none", outline: "none", boxShadow: "none" }}
         >
           <Icon icon="map" />
           Ver no Mapa
@@ -568,26 +600,26 @@ const PublicScheduling = () => {
           onClick={() => setCurrentScreen("agendar")}
           className="flex flex-col items-center justify-center p-6 bg-white rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md active:bg-gray-100"
         >
-          <div className="w-12 h-12 bg-violet-100 rounded-full flex items-center justify-center mb-2">
-            <Icon
-              icon="clock-o"
-              style={{ fontSize: 28 }}
-              className="text-violet-700"
-            />
-          </div>
+          {/* Ícone 3D agenda */}
+          <img
+            src={iconeHorario3d}
+            alt="Agendar"
+            className="w-16 h-16 mb-2"
+            draggable={false}
+          />
           <span className="font-bold text-gray-800 text-lg">Agendar</span>
         </button>
         <button
           onClick={() => setCurrentScreen("reservas")}
           className="flex flex-col items-center justify-center p-6 bg-white rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md active:bg-gray-100"
         >
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
-            <Icon
-              icon="calendar"
-              style={{ fontSize: 25 }}
-              className="text-blue-600"
-            />
-          </div>
+          {/* Ícone 3D reservas */}
+          <img
+            src={iconeAgenda3d}
+            alt="Reservas"
+            className="w-16 h-16 mb-2"
+            draggable={false}
+          />
           <span className="font-bold text-gray-800 text-lg">Reservas</span>
         </button>
       </div>

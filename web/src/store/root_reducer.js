@@ -6,6 +6,7 @@ import relatorio from "./modules/report/report_reducer";
 import profissional from "./modules/professional/professional_reducer";
 import turno from "./modules/shift/shift_reducer";
 import publicReducer from "./modules/public/reducer";
+import establishment from "./modules/establishment/establishment_reducer";
 
 export default combineReducers({
   agendamento,
@@ -15,4 +16,5 @@ export default combineReducers({
   profissional,
   turno,
   public: publicReducer,
+  establishment,
 });

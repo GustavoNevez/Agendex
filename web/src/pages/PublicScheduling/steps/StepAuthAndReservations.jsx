@@ -556,13 +556,7 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm mt-10 max-w-lg mx-auto text-left">
-      <h3 className="text-lg font-medium mb-2">
-        Faça login para ver seus agendamentos
-      </h3>
-      <p className="text-gray-500 mb-4">
-        Entre ou registre-se para visualizar suas reservas.
-      </p>
+    <div className="bg-white  rounded-xl shadow-sm  max-w-lg mx-auto text-left">
       <Step4RegisterLogin
         isRegistering={isRegistering}
         setIsRegistering={setIsRegistering}

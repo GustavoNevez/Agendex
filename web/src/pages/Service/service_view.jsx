@@ -22,8 +22,15 @@ import TableHeaderCustom from "../../components/TableHeaderCustom/table_header_c
 
 const Servicos = () => {
   const dispatch = useDispatch();
-  const { servicos, servico, estadoFormulario, componentes, comportamento, filters, pagination } =
-    useSelector((state) => state.servico);
+  const {
+    servicos,
+    servico,
+    estadoFormulario,
+    componentes,
+    comportamento,
+    filters,
+    pagination,
+  } = useSelector((state) => state.servico);
 
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -72,7 +79,14 @@ const Servicos = () => {
 
   useEffect(() => {
     dispatch(allServicos());
-  }, [dispatch, filters.page, filters.limit, filters.sortColumn, filters.sortType, filters.search]);
+  }, [
+    dispatch,
+    filters.page,
+    filters.limit,
+    filters.sortColumn,
+    filters.sortType,
+    filters.search,
+  ]);
 
   const handleSearchChange = (value) => {
     dispatch(

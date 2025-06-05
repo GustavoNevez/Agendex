@@ -83,6 +83,11 @@ function ResponsiveSidebar({
       text: "Links Personalizados",
       link: "/links",
     },
+    {
+      icon: <UserCog size={20} />,
+      text: "Estabelecimento",
+      link: "/estabelecimento",
+    },
   ];
 
   // Função para verificar se uma rota está ativa
