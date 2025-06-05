@@ -4,16 +4,18 @@ export function allProfissionais() {
   return { type: types.ALL_PROFISSIONAIS };
 }
 
-export function updateProfissional(payload) {
-  return { type: types.UPDATE_PROFISSIONAL, payload };
-}
+export const updateProfissional = (payload) => ({
+  type: "@profissional/UPDATE_PROFISSIONAL",
+  payload: { ...payload },
+});
+
+export const resetProfissional = (payload) => ({
+  type: "@profissional/RESET_PROFISSIONAL",
+  payload: payload ? { ...payload } : undefined,
+});
 
 export function addProfissional() {
   return { type: types.ADD_PROFISSIONAL };
-}
-
-export function resetProfissional() {
-  return { type: types.RESET_PROFISSIONAL };
 }
 
 export function removeProfissional() {
