@@ -15,6 +15,7 @@ import Login from "../pages/Login/login_view";
 import Dashboard from "../pages/Report/report_view";
 import LinksManagement from "../pages/LinksManagement/link_view";
 import PublicScheduling from "../pages/PublicScheduling/public_view";
+import Establishment from "../pages/Establishment/establishment_view";
 
 import "../styles/styles.css";
 
@@ -38,6 +39,11 @@ const Routers = () => {
           <PrivateRoute path="/horarios" exact component={Horarios} />
           <PrivateRoute path="/cliente" exact component={Cliente} />
           <PrivateRoute path="/links" exact component={LinksManagement} />
+          <PrivateRoute
+            path="/estabelecimento"
+            exact
+            component={Establishment}
+          />
 
           {/* Rotas públicas */}
           <Route path="/registro" exact component={Registro} />

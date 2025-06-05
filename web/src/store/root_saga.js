@@ -6,6 +6,7 @@ import relatorio from "./modules/report/report_sagas";
 import profissional from "./modules/professional/professional_sagas";
 import turno from "./modules/shift/shift_sagas";
 import publicSagas from "./modules/public/sagas";
+import establishmentSagas from "./modules/establishment/establishment_sagas";
 
 export default function* rootSaga() {
   return yield all([
@@ -16,5 +17,6 @@ export default function* rootSaga() {
     profissional,
     turno,
     publicSagas,
+    establishmentSagas,
   ]);
 }
