@@ -1,10 +1,10 @@
 const types = {
-    ALL_PROFISSIONAIS: '@profissional/ALL',
-    UPDATE_PROFISSIONAL: '@profissional/UPDATE',
-    ADD_PROFISSIONAL: '@profissional/ADD',
-    RESET_PROFISSIONAL: '@profissional/RESET',
-    REMOVE_PROFISSIONAL: '@profissional/REMOVE',
-    SAVE_PROFISSIONAL: '@profissional/SAVE',
+  ALL_PROFISSIONAIS: "@profissional/ALL",
+  UPDATE_PROFISSIONAL: "@profissional/UPDATE_PROFISSIONAL",
+  ADD_PROFISSIONAL: "@profissional/ADD_PROFISSIONAL",
+  RESET_PROFISSIONAL: "@profissional/RESET_PROFISSIONAL",
+  REMOVE_PROFISSIONAL: "@profissional/REMOVE_PROFISSIONAL",
+  SAVE_PROFISSIONAL: "@profissional/SAVE_PROFISSIONAL",
 };
 
 export default types;

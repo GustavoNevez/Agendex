@@ -10,7 +10,7 @@ export const updateServico = (payload) => ({
 });
 
 export const addServico = () => ({
-  type: "@servico/ADD_SERVICO",
+  type: types.ADD_SERVICOS,
 });
 
 export const resetServico = (payload) => ({

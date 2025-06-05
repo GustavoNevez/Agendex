@@ -21,14 +21,16 @@ import { showSuccessToast } from "../../utils/notifications";
 
 const Clientes = () => {
   const dispatch = useDispatch();
-  const { clientes, cliente, estadoFormulario, componentes, comportamento } =
-    useSelector((state) => state.clientes);
+  const {
+    clientes,
+    cliente,
+    estadoFormulario,
+    componentes,
+    comportamento,
+    filters,
+    pagination,
+  } = useSelector((state) => state.clientes);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [sortColumn, setSortColumn] = useState();
-  const [sortType, setSortType] = useState();
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [limit, setLimit] = useState(10);
-  const [page, setPage] = useState(1);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
@@ -110,39 +112,42 @@ const Clientes = () => {
     dispatch(allClientes());
   }, [dispatch]);
 
-  const getData = () => {
-    if (searchKeyword) {
-      return clientes.filter((item) => {
-        return (
-          item.nome.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-          item.email.toLowerCase().includes(searchKeyword.toLowerCase())
-        );
-      });
-    }
-    return clientes;
+  // Update search handler to match professionals
+  const handleSearchChange = (value) => {
+    dispatch(
+      updateClientes({
+        filters: { ...filters, search: value, page: 1 },
+      })
+    );
+    dispatch(allClientes());
   };
 
   const handleSortColumn = (sortColumn, sortType) => {
-    setSortColumn(sortColumn);
-    setSortType(sortType);
+    dispatch(
+      updateClientes({
+        filters: { ...filters, sortColumn, sortType },
+      })
+    );
+    dispatch(allClientes());
   };
 
-  const filteredData = getData();
-  const total = filteredData.length;
+  const handleChangePage = (nextPage) => {
+    dispatch(
+      updateClientes({
+        filters: { ...filters, page: nextPage },
+      })
+    );
+    dispatch(allClientes());
+  };
 
-  const sortedData = filteredData
-    .sort((a, b) => {
-      if (sortColumn && sortType) {
-        const x = a[sortColumn];
-        const y = b[sortColumn];
-        if (typeof x === "string") {
-          return sortType === "asc" ? x.localeCompare(y) : y.localeCompare(x);
-        }
-        return sortType === "asc" ? x - y : y - x;
-      }
-      return 0;
-    })
-    .slice((page - 1) * limit, page * limit);
+  const handleChangeLimit = (limit) => {
+    dispatch(
+      updateClientes({
+        filters: { ...filters, limit, page: 1 },
+      })
+    );
+    dispatch(allClientes());
+  };
 
   const columns = [
     {
@@ -446,8 +451,8 @@ const Clientes = () => {
             <TableHeaderCustom
               title="Clientes"
               searchPlaceholder="Buscar por nome ou email..."
-              searchKeyword={searchKeyword}
-              onSearchChange={setSearchKeyword}
+              searchKeyword={filters?.search || ""}
+              onSearchChange={handleSearchChange}
               buttonLabel="Adicionar cliente"
               buttonIcon="plus"
               isMobile={isMobile}
@@ -461,20 +466,20 @@ const Clientes = () => {
               }}
             />
             <CustomTable
-              data={sortedData}
+              data={clientes}
               columns={columns}
-              loading={estadoFormulario.filtering || componentes.drawer}
-              sortColumn={sortColumn}
-              sortType={sortType}
+              loading={estadoFormulario.filtering}
+              sortColumn={filters?.sortColumn}
+              sortType={filters?.sortType}
               onSortColumn={handleSortColumn}
               onRowClick={onRowClick}
-              isMobile={isMobile}
-              page={page}
-              limit={limit}
-              total={total}
-              onChangePage={setPage}
-              onChangeLimit={setLimit}
+              page={Number(filters?.page) || 1}
+              limit={filters?.limit || 10}
+              total={Number(pagination?.total) || 0}
+              onChangePage={handleChangePage}
+              onChangeLimit={handleChangeLimit}
               rowHeight={isMobile ? 50 : 60}
+              isMobile={isMobile} // Adicione esta linha se não existir
             />
           </div>
         </div>

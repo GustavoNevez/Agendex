@@ -1,3 +1,4 @@
+import produce from "immer";
 import types from "./client_types";
 
 const INITIAL_STATE = {
@@ -7,9 +8,10 @@ const INITIAL_STATE = {
     confirmDelete: false,
   },
   estadoFormulario: {
-    filtereing: false,
+    filtering: false,
     disabled: false,
     saving: false,
+    loadingClientes: false,
   },
   clientes: [],
   cliente: {
@@ -29,22 +31,32 @@ const INITIAL_STATE = {
       numero: "",
     },
   },
+  filters: {
+    page: 1,
+    limit: 10,
+    sortColumn: null,
+    sortType: null,
+    search: "",
+  },
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+  },
 };
 
-function cliente(state = INITIAL_STATE, action) {
+const clienteReducer = (state = INITIAL_STATE, action) => {
   switch (action.type) {
     case types.UPDATE_CLIENTES: {
       return {
         ...state,
         ...action.payload,
-        cliente: {
-          ...state.cliente,
-          ...action.payload.cliente,
-        },
-        componentes: {
-          ...state.componentes,
-          ...action.payload.componentes,
-        },
+        filters: action.payload.filters
+          ? { ...state.filters, ...action.payload.filters }
+          : state.filters,
+        pagination: action.payload.pagination
+          ? { ...state.pagination, ...action.payload.pagination }
+          : state.pagination,
       };
     }
     case types.RESET_CLIENTE: {
@@ -57,6 +69,6 @@ function cliente(state = INITIAL_STATE, action) {
     default:
       return state;
   }
-}
+};
 
-export default cliente;
+export default clienteReducer;

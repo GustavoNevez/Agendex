@@ -9,45 +9,58 @@ import api from "../../../services/api";
 import { showSuccessToast, showErrorToast } from "../../../utils/notifications";
 
 export function* allClientes() {
-  const { estadoFormulario } = yield select((state) => state.clientes);
+  const { estadoFormulario, filters } = yield select((state) => state.clientes);
 
   try {
-    const storedUser = localStorage.getItem("@Auth:user");
-    const user = JSON.parse(storedUser);
-    const estabelecimentoId = user.id;
-
     yield put(
       updateClientes({
-        estadoFormulario: { ...estadoFormulario, filtering: true },
+        estadoFormulario: {
+          ...estadoFormulario,
+          filtering: true,
+          loadingClientes: true,
+        },
       })
     );
+
+    const user = JSON.parse(localStorage.getItem("@Auth:user"));
+    const params = new URLSearchParams({
+      page: filters?.page || 1,
+      limit: filters?.limit || 10,
+      ...(filters?.sortColumn && { sortColumn: filters.sortColumn }),
+      ...(filters?.sortType && { sortType: filters.sortType }),
+      ...(filters?.search && { search: filters.search }),
+    });
 
     const { data: response } = yield call(
       api.get,
-      `/cliente/clientes/${estabelecimentoId}`
-    );
-
-    yield put(
-      updateClientes({
-        estadoFormulario: { ...estadoFormulario, filtering: false },
-      })
+      `/cliente/clientes/${user.id}?${params}`
     );
 
     if (response.error) {
       showErrorToast(response.message);
       return false;
     }
-    yield put(updateClientes({ clientes: response.clientes }));
+
     yield put(
       updateClientes({
-        estadoFormulario: { ...estadoFormulario, disabled: true },
+        clientes: response.clientes,
+        pagination: {
+          total: response.total,
+          page: response.page,
+          limit: response.limit,
+        },
       })
     );
   } catch (err) {
     showErrorToast(err.message);
+  } finally {
     yield put(
       updateClientes({
-        estadoFormulario: { ...estadoFormulario, filtering: false },
+        estadoFormulario: {
+          ...estadoFormulario,
+          filtering: false,
+          loadingClientes: false,
+        },
       })
     );
   }

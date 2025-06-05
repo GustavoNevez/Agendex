@@ -9,7 +9,7 @@ import api from "../../../services/api";
 import { showErrorToast, showSuccessToast } from "../../../utils/notifications";
 
 export function* allServicos() {
-  const { estadoFormulario } = yield select((state) => state.servico);
+  const { estadoFormulario, filters } = yield select((state) => state.servico);
 
   try {
     const storedUser = localStorage.getItem("@Auth:user");
@@ -21,9 +21,18 @@ export function* allServicos() {
         estadoFormulario: { ...estadoFormulario, filtering: true },
       })
     );
+
+    const params = new URLSearchParams({
+      page: filters?.page || 1,
+      limit: filters?.limit || 10,
+      ...(filters?.sortColumn && { sortColumn: filters.sortColumn }),
+      ...(filters?.sortType && { sortType: filters.sortType }),
+      ...(filters?.search && { search: filters.search }),
+    });
+
     const { data: response } = yield call(
       api.get,
-      `/servico/estabelecimento/${estabelecimentoId}`
+      `/servico/estabelecimento/${estabelecimentoId}?${params}`
     );
     yield put(
       updateServico({
@@ -35,7 +44,16 @@ export function* allServicos() {
       showErrorToast(response.message);
       return false;
     }
-    yield put(updateServico({ servicos: response.servicos }));
+    yield put(
+      updateServico({
+        servicos: response.servicos,
+        pagination: {
+          total: response.total,
+          page: response.page,
+          limit: response.limit,
+        },
+      })
+    );
   } catch (err) {
     showErrorToast(err.message);
     yield put(

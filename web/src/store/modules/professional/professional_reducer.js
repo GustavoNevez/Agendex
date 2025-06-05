@@ -2,7 +2,19 @@ import produce from "immer";
 import types from "./professional_types";
 
 const INITIAL_STATE = {
-  comportamento: "create",
+  profissional: {
+    estabelecimentoId: "",
+    id: "",
+    nome: "",
+    email: "",
+    telefone: "",
+    especialidade: "",
+    servicosId: [],
+    status: "A",
+    customLink: "",
+    foto: "",
+  },
+  profissionais: [],
   componentes: {
     drawer: false,
     confirmDelete: false,
@@ -12,38 +24,50 @@ const INITIAL_STATE = {
     filtering: false,
     disabled: true,
     saving: false,
+    loadingFoto: false,
+    loadingServicos: false,
+    loadingProfissionais: false,
   },
-  profissionais: [],
-  profissional: {
-    estabelecimentoId: "",
-    id: "",
-    nome: "",
-    email: "",
-    telefone: "",
-    especialidade: "",
-    servicosId: [], // Array para armazenar IDs dos serviços vinculados
-    status: "A",
-    customLink: "", // Campo para link personalizado
+  comportamento: "create",
+  filters: {
+    page: 1,
+    limit: 10,
+    sortColumn: null,
+    sortType: null,
+    search: "",
+  },
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
   },
 };
 
-function profissional(state = INITIAL_STATE, action) {
+const profissionalReducer = (state = INITIAL_STATE, action) => {
   switch (action.type) {
-    case types.UPDATE_PROFISSIONAL: {
-      return produce(state, (draft) => {
-        draft = { ...draft, ...action.payload };
-        return draft;
-      });
+    case "@profissional/UPDATE_PROFISSIONAL": {
+      return {
+        ...state,
+        ...action.payload,
+        filters: action.payload.filters
+          ? { ...state.filters, ...action.payload.filters }
+          : state.filters,
+        pagination: action.payload.pagination
+          ? { ...state.pagination, ...action.payload.pagination }
+          : state.pagination,
+      };
     }
-    case types.RESET_PROFISSIONAL: {
-      return produce(state, (draft) => {
-        draft.profissional = INITIAL_STATE.profissional;
-        return draft;
-      });
-    }
+
+    case "@profissional/RESET_PROFISSIONAL":
+      return {
+        ...state,
+        profissional: INITIAL_STATE.profissional,
+        comportamento: action.payload?.comportamento || "create",
+      };
+
     default:
       return state;
   }
-}
+};
 
-export default profissional;
+export default profissionalReducer;

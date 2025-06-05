@@ -15,10 +15,12 @@ import {
   resetProfissional,
   removeProfissional,
   saveProfissional,
+  uploadFotoProfissional,
 } from "../../store/modules/professional/professional_actions";
-import { showSuccessToast } from "../../utils/notifications";
+import { showSuccessToast, showErrorToast } from "../../utils/notifications";
 import useMediaQuery from "../../hooks/useMediaQuery";
 import CustomButton from "../../components/Button/button_custom";
+import api from "../../services/api";
 
 const Profissionais = () => {
   const dispatch = useDispatch();
@@ -28,16 +30,13 @@ const Profissionais = () => {
     estadoFormulario,
     componentes,
     comportamento,
+    filters,
+    pagination,
   } = useSelector((state) => state.profissional) || {};
   const { servicos } = useSelector((state) => state.servico) || {
     servicos: [],
   };
   const [selectedServices, setSelectedServices] = useState([]);
-  const [sortColumn, setSortColumn] = useState();
-  const [sortType, setSortType] = useState();
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [limit, setLimit] = useState(10);
-  const [page, setPage] = useState(1);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   const selecionarComponente = (componente, state) => {
@@ -57,9 +56,24 @@ const Profissionais = () => {
   };
 
   const onRowClick = (profissional) => {
+    // Ensure we handle the photo URL correctly
+    const profissionalWithPhoto = {
+      ...profissional,
+      foto: profissional.foto || null,
+      fotoPreview: null,
+    };
+
+    // If foto is a relative path, prefix it with API URL
+    if (
+      profissionalWithPhoto.foto &&
+      !profissionalWithPhoto.foto.startsWith("http")
+    ) {
+      profissionalWithPhoto.foto = `${api.defaults.baseURL}/files/${profissionalWithPhoto.foto}`;
+    }
+
     dispatch(
       updateProfissional({
-        profissional,
+        profissional: profissionalWithPhoto,
         comportamento: "update",
       })
     );
@@ -68,7 +82,21 @@ const Profissionais = () => {
   };
 
   const save = () => {
-    selecionarProfissional("servicosId", selectedServices);
+    // Make sure all required fields are included
+    const updatedData = {
+      ...profissional,
+      servicosId: selectedServices,
+      status: profissional.status || "A",
+      email: profissional.email?.trim(),
+      nome: profissional.nome?.trim(),
+    };
+
+    // Update professional data in state before dispatching action
+    dispatch(
+      updateProfissional({
+        profissional: updatedData,
+      })
+    );
 
     if (comportamento === "create") {
       dispatch(addProfissional());
@@ -110,54 +138,90 @@ const Profissionais = () => {
     });
   };
 
-  const getData = () => {
-    if (searchKeyword) {
-      return profissionais.filter((item) => {
-        return (
-          item.nome.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-          item.email.toLowerCase().includes(searchKeyword.toLowerCase())
-        );
-      });
-    }
-    return profissionais;
+  const handleSearchChange = (value) => {
+    dispatch(
+      updateProfissional({
+        filters: { ...filters, search: value, page: 1 }, // Reset to first page on search
+      })
+    );
+    dispatch(allProfissionais());
   };
 
-  const filteredData = getData();
-  const total = filteredData.length;
-
-  const paginatedData = filteredData
-    .sort((a, b) => {
-      if (sortColumn && sortType) {
-        const x = a[sortColumn];
-        const y = b[sortColumn];
-        if (typeof x === "string") {
-          return sortType === "asc" ? x.localeCompare(y) : y.localeCompare(x);
-        }
-        return sortType === "asc" ? x - y : y - x;
-      }
-      return 0;
-    })
-    .slice((page - 1) * limit, page * limit);
-
   const handleSortColumn = (sortColumn, sortType) => {
-    setSortColumn(sortColumn);
-    setSortType(sortType);
+    dispatch(
+      updateProfissional({
+        filters: { ...filters, sortColumn, sortType },
+      })
+    );
+    dispatch(allProfissionais());
+  };
+
+  const handleChangePage = (nextPage) => {
+    dispatch(
+      updateProfissional({
+        filters: { ...filters, page: nextPage },
+      })
+    );
+    dispatch(allProfissionais());
+  };
+
+  const handleChangeLimit = (limit) => {
+    dispatch(
+      updateProfissional({
+        filters: { ...filters, limit, page: 1 },
+      })
+    );
+    dispatch(allProfissionais());
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedTypes.includes(file.type)) {
+        showErrorToast(
+          "Tipo de arquivo inválido. Use apenas JPG, JPEG ou PNG."
+        );
+        return;
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+
+      dispatch(
+        updateProfissional({
+          profissional: {
+            ...profissional,
+            foto: file,
+            fotoPreview: previewUrl,
+          },
+        })
+      );
+
+      // Remove this dispatch as we'll handle photo updates in saveProfissional
+      // if (profissional.id) {
+      //   dispatch(uploadFotoProfissional(profissional.id, file));
+      // }
+    }
   };
 
   const columns = [
     {
       key: "nome",
-      label: "Nome",
-      width: isMobile ? 200 : 180,
-      sortable: true,
+      label: isMobile ? "Profissionais" : "Nome",
+      width: 250,
       render: (value, rowData) => (
         <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 font-bold">
+          <div className="h-8 w-8 min-w-[2rem] rounded-full bg-blue-100 flex items-center justify-center text-blue-500 font-bold">
             {value ? value.charAt(0) : "?"}
           </div>
-          <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{value}</div>
-            <div className="text-sm text-gray-500">{rowData.especialidade}</div>
+          <div className="ml-4 truncate">
+            <div className="font-medium text-gray-900">{value}</div>
+            {!isMobile && (
+              <div className="text-sm text-gray-500">
+                {rowData.especialidade}
+              </div>
+            )}
           </div>
         </div>
       ),
@@ -167,21 +231,18 @@ const Profissionais = () => {
       label: "E-mail",
       width: 200,
       hideOnMobile: true,
-      sortable: true,
     },
     {
       key: "telefone",
       label: "Telefone",
       width: 150,
       hideOnMobile: true,
-      sortable: true,
     },
     {
       key: "status",
       label: "Status",
       width: 100,
       hideOnMobile: true,
-      sortable: true,
       render: (value) => (
         <Tag color={value === "A" ? "green" : "red"}>
           {value === "A" ? "Ativo" : "Inativo"}
@@ -191,11 +252,11 @@ const Profissionais = () => {
     {
       key: "actions",
       label: "Ações",
-      width: isMobile ? 130 : 120,
+      width: 120,
       fixed: "right",
       render: (_, rowData) => (
         <CustomButton
-          label="Ver informações"
+          label={isMobile ? "Ver detalhes" : "Ver informações"}
           appearance="primary"
           gradient="primary"
           size="xs"
@@ -248,9 +309,53 @@ const Profissionais = () => {
             ? () => selecionarComponente("confirmDelete", true)
             : undefined
         }
-        loading={estadoFormulario.saving}
+        loading={estadoFormulario.saving || estadoFormulario.loadingFoto}
       >
         <div className="row mt-2">
+          <div className="form-group col-12 mb-3 text-center">
+            <div className="position-relative d-inline-block">
+              <div
+                className="rounded-circle overflow-hidden"
+                style={{
+                  width: "120px",
+                  height: "120px",
+                  border: "2px solid #ddd",
+                }}
+              >
+                {estadoFormulario.loadingFoto ? (
+                  <div className="w-100 h-100 bg-light d-flex align-items-center justify-content-center">
+                    <Icon icon="spinner" pulse />
+                  </div>
+                ) : profissional?.fotoPreview || profissional?.foto ? (
+                  <img
+                    src={profissional.fotoPreview || profissional.foto}
+                    alt="Foto do profissional"
+                    className="w-100 h-100 object-fit-cover"
+                  />
+                ) : (
+                  <div className="w-100 h-100 bg-light d-flex align-items-center justify-content-center">
+                    <Icon
+                      icon="user"
+                      style={{ fontSize: "3em", color: "#999" }}
+                    />
+                  </div>
+                )}
+              </div>
+              <label
+                className="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2"
+                style={{ cursor: "pointer" }}
+              >
+                <Icon icon="camera" />
+                <input
+                  type="file"
+                  className="d-none"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+              </label>
+            </div>
+          </div>
+
           <div className="form-group col-md-6 col-sm-12 mb-3">
             <b className="">Nome completo *</b>
             <input
@@ -445,8 +550,8 @@ const Profissionais = () => {
             <TableHeaderCustom
               title="Profissionais"
               searchPlaceholder="Buscar por nome ou email..."
-              searchKeyword={searchKeyword}
-              onSearchChange={setSearchKeyword}
+              searchKeyword={filters.search}
+              onSearchChange={handleSearchChange}
               buttonLabel="Adicionar profissional"
               buttonIcon="plus"
               isMobile={isMobile}
@@ -462,20 +567,22 @@ const Profissionais = () => {
               }}
             />
             <CustomTable
-              data={paginatedData}
+              data={profissionais}
               columns={columns}
-              loading={estadoFormulario.filtering || componentes.drawer}
-              sortColumn={sortColumn}
-              sortType={sortType}
+              loading={
+                estadoFormulario.filtering ||
+                estadoFormulario.loadingProfissionais
+              }
+              sortColumn={filters?.sortColumn}
+              sortType={filters?.sortType}
               onSortColumn={handleSortColumn}
               onRowClick={onRowClick}
-              isMobile={isMobile}
-              page={page}
-              limit={limit}
-              total={total}
-              onChangePage={setPage}
-              onChangeLimit={setLimit}
+              page={Number(filters?.page) || 1}
+              limit={10}
+              total={Number(pagination?.total) || 0}
+              onChangePage={handleChangePage}
               rowHeight={isMobile ? 50 : 60}
+              isMobile={isMobile}
             />
           </div>
         </div>

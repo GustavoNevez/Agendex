@@ -6,7 +6,7 @@ import CustomButton from "../../components/Button/button_custom";
 import moment from "moment";
 import "rsuite/dist/styles/rsuite-default.css";
 import "rsuite-table/dist/css/rsuite-table.css";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   allServicos,
@@ -22,14 +22,8 @@ import TableHeaderCustom from "../../components/TableHeaderCustom/table_header_c
 
 const Servicos = () => {
   const dispatch = useDispatch();
-  const { servicos, servico, estadoFormulario, componentes, comportamento } =
+  const { servicos, servico, estadoFormulario, componentes, comportamento, filters, pagination } =
     useSelector((state) => state.servico);
-
-  const [limit, setPage] = useState(10);
-  const [page, setLimit] = useState(1);
-  const [sortColumn, setSortColumn] = useState();
-  const [sortType, setSortType] = useState();
-  const [searchKeyword, setSearchKeyword] = useState("");
 
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -78,39 +72,46 @@ const Servicos = () => {
 
   useEffect(() => {
     dispatch(allServicos());
-  }, [dispatch]);
+  }, [dispatch, filters.page, filters.limit, filters.sortColumn, filters.sortType, filters.search]);
 
-  const getData = () => {
-    if (searchKeyword) {
-      return servicos.filter((item) => {
-        return item.titulo.toLowerCase().includes(searchKeyword.toLowerCase());
-      });
-    }
-    return servicos;
+  const handleSearchChange = (value) => {
+    dispatch(
+      updateServico({
+        filters: { ...filters, search: value, page: 1 },
+      })
+    );
+    dispatch(allServicos());
   };
-
-  const filteredData = getData();
-  const total = filteredData.length;
-
-  // Paginação dos dados
-  const paginatedData = filteredData
-    .sort((a, b) => {
-      if (sortColumn && sortType) {
-        const x = a[sortColumn];
-        const y = b[sortColumn];
-        if (typeof x === "string") {
-          return sortType === "asc" ? x.localeCompare(y) : y.localeCompare(x);
-        }
-        return sortType === "asc" ? x - y : y - x;
-      }
-      return 0;
-    })
-    .slice((page - 1) * limit, page * limit);
 
   const handleSortColumn = (sortColumn, sortType) => {
-    setSortColumn(sortColumn);
-    setSortType(sortType);
+    dispatch(
+      updateServico({
+        filters: { ...filters, sortColumn, sortType },
+      })
+    );
+    dispatch(allServicos());
   };
+
+  const handleChangePage = (nextPage) => {
+    dispatch(
+      updateServico({
+        filters: { ...filters, page: nextPage },
+      })
+    );
+    dispatch(allServicos());
+  };
+
+  const handleChangeLimit = (limit) => {
+    dispatch(
+      updateServico({
+        filters: { ...filters, limit, page: 1 },
+      })
+    );
+    dispatch(allServicos());
+  };
+
+  const filteredData = servicos || [];
+  const total = pagination?.total || 0;
 
   const columns = [
     {
@@ -347,8 +348,8 @@ const Servicos = () => {
             <TableHeaderCustom
               title="Serviços"
               searchPlaceholder="Buscar por título..."
-              searchKeyword={searchKeyword}
-              onSearchChange={setSearchKeyword}
+              searchKeyword={filters.search}
+              onSearchChange={handleSearchChange}
               buttonLabel="Adicionar serviço"
               buttonIcon="plus"
               isMobile={isMobile}
@@ -359,19 +360,19 @@ const Servicos = () => {
               }}
             />
             <CustomTable
-              data={paginatedData}
+              data={filteredData}
               columns={columns}
               loading={estadoFormulario.filtering}
-              sortColumn={sortColumn}
-              sortType={sortType}
+              sortColumn={filters?.sortColumn}
+              sortType={filters?.sortType}
               onSortColumn={handleSortColumn}
               onRowClick={onRowClick}
               isMobile={isMobile}
-              page={page}
-              limit={limit}
-              total={total}
-              onChangePage={setPage}
-              onChangeLimit={setLimit}
+              page={Number(filters?.page) || 1}
+              limit={Number(filters?.limit) || 10}
+              total={Number(total)}
+              onChangePage={handleChangePage}
+              onChangeLimit={handleChangeLimit}
               rowHeight={isMobile ? 50 : 60}
             />
           </div>

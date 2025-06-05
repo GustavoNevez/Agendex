@@ -1,5 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../../context/auth_provider";
+import { Link } from "react-router-dom";
 import whiteLogo from "../../assets/Agendex-Branco.JPG";
 
 // Componente do botão hamburger animado - apenas para desktop
@@ -88,7 +89,9 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
 
           {/* Logo centralizado */}
           <div className="absolute left-1/2 transform -translate-x-1/2">
-            <img src={whiteLogo} className="h-7" alt="Logo" />
+            <Link to="/">
+              <img src={whiteLogo} className="h-7" alt="Logo" />
+            </Link>
           </div>
 
           {/* Avatar do usuário (à direita) */}
@@ -134,7 +137,9 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
         <header className="flex items-center justify-between bg-white shadow-md p-3 w-full fixed top-0 left-0 right-0 z-[150]">
           <div className="flex items-center">
             {/* Logo */}
-            <img src={whiteLogo} className="h-8 mr-14" alt="Logo" />
+            <Link to="/">
+              <img src={whiteLogo} className="h-8 mr-14" alt="Logo" />
+            </Link>
             {/* Botão de menu animado para desktop - posicionado mais à esquerda com área de clique maior */}
             <div className="flex items-center justify-center">
               <HamburgerButton
