@@ -1,5 +1,5 @@
 import { Icon, Tag } from "rsuite";
-import CustomTable from "../../components/CustomTable/table_custom";
+import CustomTable from "../../components/Table/table_custom";
 import CustomModal from "../../components/Modal/modal_custom"; // Import our reusable Modal component
 import CustomDrawer from "../../components/Drawer/drawer_custom"; // Import our new CustomDrawer component
 import CustomButton from "../../components/Button/button_custom";
@@ -19,6 +19,7 @@ import {
 import { showSuccessToast } from "../../utils/notifications";
 import useMediaQuery from "../../hooks/useMediaQuery"; // Add this import
 import TableHeaderCustom from "../../components/TableHeaderCustom/table_header_custom";
+import api from "../../services/api";
 
 const Servicos = () => {
   const dispatch = useDispatch();
@@ -50,10 +51,41 @@ const Servicos = () => {
     );
   };
 
-  const onRowClick = (servico) => {
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedTypes.includes(file.type)) {
+        showSuccessToast(
+          "Tipo de arquivo inválido. Use apenas JPG, JPEG ou PNG."
+        );
+        return;
+      }
+      const previewUrl = URL.createObjectURL(file);
+      dispatch(
+        updateServico({
+          servico: {
+            ...servico,
+            foto: file,
+            fotoPreview: previewUrl,
+          },
+        })
+      );
+    }
+  };
+
+  const onRowClick = (servicoRow) => {
+    // Garante preview correto ao editar
+    let fotoPreview = null;
+    let foto = servicoRow.foto || "";
+    if (foto && !foto.startsWith("http")) {
+      foto = `${api.defaults.baseURL}/files/${foto}`;
+    }
+    fotoPreview = foto;
     dispatch(
       updateServico({
-        servico,
+        servico: { ...servicoRow, foto, fotoPreview },
         comportamento: "update",
       })
     );
@@ -137,7 +169,7 @@ const Servicos = () => {
     {
       key: "preco",
       label: "Preço",
-      width: 120,
+      width: 240,
       hideOnMobile: true,
       sortable: true,
       render: (value) => `R$ ${parseFloat(value).toFixed(2)}`,
@@ -145,14 +177,14 @@ const Servicos = () => {
     {
       key: "recorrencia",
       label: "Recorrência",
-      width: 120,
+      width: 240,
       hideOnMobile: true,
       sortable: true,
     },
     {
       key: "duracao",
       label: "Duração",
-      width: 120,
+      width: 240,
       hideOnMobile: true,
       sortable: true,
       render: (value) => (value ? moment(value).format("HH:mm") : "N/A"),
@@ -235,6 +267,46 @@ const Servicos = () => {
         size="md"
       >
         <div className="row mt-2 ">
+          {/* Foto do serviço */}
+          <div className="form-group col-12 mb-3 text-center">
+            <div className="position-relative d-inline-block">
+              <div
+                className="rounded-circle overflow-hidden"
+                style={{
+                  width: "120px",
+                  height: "120px",
+                  border: "2px solid #ddd",
+                }}
+              >
+                {servico.fotoPreview || servico.foto ? (
+                  <img
+                    src={servico.fotoPreview || servico.foto}
+                    alt="Foto do serviço"
+                    className="w-100 h-100 object-fit-cover"
+                  />
+                ) : (
+                  <div className="w-100 h-100 bg-light d-flex align-items-center justify-content-center">
+                    <Icon
+                      icon="picture"
+                      style={{ fontSize: "3em", color: "#999" }}
+                    />
+                  </div>
+                )}
+              </div>
+              <label
+                className="position-absolute bottom-0 end-0 bg-primary text-white rounded-circle p-2"
+                style={{ cursor: "pointer" }}
+              >
+                <Icon icon="camera" />
+                <input
+                  type="file"
+                  className="d-none"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                />
+              </label>
+            </div>
+          </div>
           <div className="form-group col-md-6 col-sm-12 mb-3 ">
             <b className="">Título</b>
             <input

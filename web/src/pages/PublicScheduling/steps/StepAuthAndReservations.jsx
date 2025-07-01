@@ -65,19 +65,6 @@ const StepAuthAndReservations = ({ customLink, publicData }) => {
     }
   }, [clientRegistration.userToken, customLink, dispatch]);
 
-  // Garante que userToken está setado após login/registro bem-sucedido
-  useEffect(() => {
-    if (
-      clientRegistration &&
-      clientRegistration.success === true &&
-      clientRegistration.step === 3 &&
-      !clientRegistration.userToken
-    ) {
-      // Atualiza o Redux para garantir que userToken está true
-      dispatch(updateClientRegistration({ userToken: true }));
-    }
-  }, [clientRegistration, dispatch]);
-
   // Controle de steps de verificação
   useEffect(() => {
     if (isRegistering && clientRegistration) {

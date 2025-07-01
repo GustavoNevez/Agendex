@@ -6,6 +6,7 @@ import {
   saveEstablishment,
 } from "../../store/modules/establishment/establishment_actions";
 import { Button, Icon } from "rsuite";
+import { WarningModal } from "../../components/Modal/modal_custom";
 
 // Máscara visual para telefone: (XX)9XXXX-XXXX
 function maskPhone(value) {
@@ -17,7 +18,7 @@ function maskPhone(value) {
 
 // Formato para enviar ao backend: +55XXXXXXXXXXX
 function formatPhoneToSend(value) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
+  const digits = value.replace(/\D/g, "");
   if (digits.length < 10) return "";
   return `+55${digits}`;
 }
@@ -49,6 +50,8 @@ const Establishment = () => {
     cep: "",
     complemento: "",
   });
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingSave, setPendingSave] = useState(null);
 
   useEffect(() => {
     dispatch(fetchEstablishment());
@@ -78,15 +81,24 @@ const Establishment = () => {
   useEffect(() => {
     // Preenche os campos de endereço ao carregar os dados
     if (estabelecimento && estabelecimento.endereco) {
-      setEndereco({
-        rua: estabelecimento.endereco.rua || "",
-        numero: estabelecimento.endereco.numero || "",
-        bairro: estabelecimento.endereco.bairro || "",
-        cidade: estabelecimento.endereco.cidade || "",
-        estado: estabelecimento.endereco.estado || "",
-        cep: estabelecimento.endereco.cep || "",
-        complemento: estabelecimento.endereco.complemento || "",
-      });
+      try {
+        const enderecoData =
+          typeof estabelecimento.endereco === "string"
+            ? JSON.parse(estabelecimento.endereco)
+            : estabelecimento.endereco;
+
+        setEndereco({
+          rua: enderecoData.rua || "",
+          numero: enderecoData.numero || "",
+          bairro: enderecoData.bairro || "",
+          cidade: enderecoData.cidade || "",
+          estado: enderecoData.estado || "",
+          cep: enderecoData.cep || "",
+          complemento: enderecoData.complemento || "",
+        });
+      } catch (e) {
+        console.error("Erro ao carregar endereço:", e);
+      }
     }
   }, [estabelecimento.endereco]);
 
@@ -116,17 +128,54 @@ const Establishment = () => {
 
   const handleSave = (e) => {
     e.preventDefault();
-    dispatch(
-      saveEstablishment({
-        ...estabelecimento,
-        telefone: formatPhoneToSend(estabelecimento.telefone || telefoneInput),
-        endereco: JSON.stringify(endereco),
-      })
-    );
+    const enderecoToSave = {
+      ...endereco,
+      rua: endereco.rua.trim(),
+      numero: endereco.numero.trim(),
+      bairro: endereco.bairro.trim(),
+      cidade: endereco.cidade.trim(),
+      estado: endereco.estado.trim(),
+      cep: endereco.cep.trim(),
+      complemento: endereco.complemento.trim(),
+    };
+
+    // Salva os dados pendentes e mostra o modal de confirmação
+    setPendingSave({
+      ...estabelecimento,
+      telefone: formatPhoneToSend(telefoneInput),
+      endereco: JSON.stringify(enderecoToSave),
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSave = () => {
+    if (pendingSave) {
+      dispatch(saveEstablishment(pendingSave));
+      setPendingSave(null);
+      setShowConfirmModal(false);
+    }
+  };
+
+  const handleCancelSave = () => {
+    setShowConfirmModal(false);
+    setPendingSave(null);
   };
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
+      {/* Modal de confirmação */}
+      <WarningModal
+        show={showConfirmModal}
+        onClose={handleCancelSave}
+        title="Confirmar Alterações"
+        confirmLabel="Sim, salvar"
+        cancelLabel="Cancelar"
+        onConfirm={handleConfirmSave}
+        color="blue"
+      >
+        Tem certeza que deseja salvar as alterações do perfil do
+        estabelecimento?
+      </WarningModal>
       {loading ? (
         <div className="text-center py-8">
           <Icon icon="spinner" spin size="2x" />
@@ -164,30 +213,32 @@ const Establishment = () => {
             </div>
           </div>
           <div className="mb-4">
-            <label className="block font-medium mb-1">Nome</label>
+            <label className="block font-medium mb-2">
+              Nome do Estabelecimento
+            </label>
             <input
               type="text"
-              className="form-control"
+              className="form-control w-full"
               value={estabelecimento.nome}
               onChange={(e) => handleChange("nome", e.target.value)}
               required
             />
           </div>
           <div className="mb-4">
-            <label className="block font-medium mb-1">E-mail</label>
+            <label className="block font-medium mb-2">E-mail</label>
             <input
               type="email"
-              className="form-control"
+              className="form-control w-full"
               value={estabelecimento.email || ""}
               onChange={(e) => handleChange("email", e.target.value)}
               required
             />
           </div>
           <div className="mb-4">
-            <label className="block font-medium mb-1">Telefone</label>
+            <label className="block font-medium mb-2">Telefone</label>
             <input
               type="text"
-              className="form-control"
+              className="form-control w-full"
               value={telefoneInput}
               onChange={(e) => handleChange("telefone", e.target.value)}
               placeholder="(99) 99999-9999"
@@ -195,105 +246,125 @@ const Establishment = () => {
             />
           </div>
           <div className="mb-4">
-            <label className="block font-medium mb-1">Link Personalizado</label>
-            <div className="flex items-center">
-              <span className="bg-gray-100 px-2 py-1 rounded-l text-gray-500">
-                public/e/
-              </span>
-              <input
-                type="text"
-                className="form-control rounded-l-none"
-                value={estabelecimento.customLink || ""}
-                onChange={(e) =>
-                  handleChange(
-                    "customLink",
-                    e.target.value.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase()
-                  )
-                }
-                placeholder="meu-estabelecimento"
-              />
-            </div>
-            <small className="text-gray-500">
-              Use apenas letras, números e hífens.
-            </small>
-            {estabelecimento.customLink && (
-              <div className="mt-2">
-                <span className="text-sm text-gray-700">
-                  URL:{" "}
-                  <code className="bg-gray-100 px-2 py-1 rounded">
-                    {`http://localhost:3001/public/e/${estabelecimento.customLink}`}
-                  </code>
-                  <Button
-                    appearance="subtle"
-                    size="xs"
-                    onClick={() =>
-                      navigator.clipboard.writeText(
-                        `http://localhost:3001/public/e/${estabelecimento.customLink}`
-                      )
-                    }
-                  >
-                    <Icon icon="copy" />
-                  </Button>
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="mb-4">
-            <label className="block font-medium mb-1">Endereço</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Rua"
-                value={endereco.rua}
-                onChange={(e) => handleEnderecoChange("rua", e.target.value)}
-              />
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Número"
-                value={endereco.numero}
-                onChange={(e) => handleEnderecoChange("numero", e.target.value)}
-              />
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Bairro"
-                value={endereco.bairro}
-                onChange={(e) => handleEnderecoChange("bairro", e.target.value)}
-              />
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Cidade"
-                value={endereco.cidade}
-                onChange={(e) => handleEnderecoChange("cidade", e.target.value)}
-              />
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Estado"
-                value={endereco.estado}
-                onChange={(e) => handleEnderecoChange("estado", e.target.value)}
-              />
-              <input
-                type="text"
-                className="form-control"
-                placeholder="CEP"
-                value={endereco.cep}
-                onChange={(e) => handleEnderecoChange("cep", e.target.value)}
-              />
-              <input
-                type="text"
-                className="form-control md:col-span-2"
-                placeholder="Complemento"
-                value={endereco.complemento}
-                onChange={(e) =>
-                  handleEnderecoChange("complemento", e.target.value)
-                }
-              />
-            </div>
+            <label className="block font-medium mb-2">Link Personalizado</label>
+            <input
+              type="text"
+              className="form-control w-full"
+              value={estabelecimento.customLink || ""}
+              onChange={(e) =>
+                handleChange(
+                  "customLink",
+                  e.target.value.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase()
+                )
+              }
+              placeholder="meu-estabelecimento"
+            />
             <div className="mt-2">
+              <small className="text-gray-500 block mb-2">
+                Use apenas letras, números e hífens.
+              </small>
+              {estabelecimento.customLink && (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <label className="text-sm text-gray-600 block mb-1">
+                    URL do seu estabelecimento:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-white px-3 py-2 rounded text-sm break-all">
+                      {`http://localhost:3001/public/e/${estabelecimento.customLink}`}
+                    </code>
+                    <Button
+                      appearance="subtle"
+                      size="sm"
+                      onClick={() =>
+                        navigator.clipboard.writeText(
+                          `http://localhost:3001/public/e/${estabelecimento.customLink}`
+                        )
+                      }
+                    >
+                      <Icon icon="copy" /> Copiar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block font-medium mb-2">Rua</label>
+                <input
+                  type="text"
+                  className="form-control w-full"
+                  value={endereco.rua}
+                  onChange={(e) => handleEnderecoChange("rua", e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-2">Número</label>
+                <input
+                  type="text"
+                  className="form-control w-full"
+                  value={endereco.numero}
+                  onChange={(e) =>
+                    handleEnderecoChange("numero", e.target.value)
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-2">Bairro</label>
+                <input
+                  type="text"
+                  className="form-control w-full"
+                  value={endereco.bairro}
+                  onChange={(e) =>
+                    handleEnderecoChange("bairro", e.target.value)
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-2">Cidade</label>
+                <input
+                  type="text"
+                  className="form-control w-full"
+                  value={endereco.cidade}
+                  onChange={(e) =>
+                    handleEnderecoChange("cidade", e.target.value)
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-2">Estado</label>
+                <input
+                  type="text"
+                  className="form-control w-full"
+                  value={endereco.estado}
+                  onChange={(e) =>
+                    handleEnderecoChange("estado", e.target.value)
+                  }
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-2">CEP</label>
+                <input
+                  type="text"
+                  className="form-control w-full"
+                  value={endereco.cep}
+                  onChange={(e) => handleEnderecoChange("cep", e.target.value)}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block font-medium mb-2">Complemento</label>
+                <input
+                  type="text"
+                  className="form-control w-full"
+                  value={endereco.complemento}
+                  onChange={(e) =>
+                    handleEnderecoChange("complemento", e.target.value)
+                  }
+                />
+              </div>
+            </div>
+            <div className="mt-3">
               <Button
                 appearance="ghost"
                 color="green"

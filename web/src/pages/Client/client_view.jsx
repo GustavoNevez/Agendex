@@ -5,7 +5,7 @@ import CustomModal from "../../components/Modal/modal_custom"; // Import our reu
 import CustomDrawer, {
   MaskedInput,
 } from "../../components/Drawer/drawer_custom"; // Import our new CustomDrawer component with MaskedInput
-import CustomTable from "../../components/CustomTable/table_custom";
+import CustomTable from "../../components/Table/table_custom";
 import useMediaQuery from "../../hooks/useMediaQuery";
 import "rsuite/dist/styles/rsuite-default.css";
 import { useEffect, useState } from "react";

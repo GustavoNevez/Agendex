@@ -7,6 +7,7 @@ const INITIAL_STATE = {
     telefone: "",
     customLink: "",
     foto: "",
+    endereco: "",
   },
   loading: false,
   saving: false,
