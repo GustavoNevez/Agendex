@@ -6,6 +6,8 @@ const INITIAL_STATE = {
     duracao: "",
     status: "A",
     descricao: "",
+    foto: "", // novo campo
+    fotoPreview: null, // novo campo
   },
   servicos: [],
   componentes: {

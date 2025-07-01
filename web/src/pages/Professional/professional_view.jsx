@@ -3,7 +3,7 @@ import TableHeaderCustom from "../../components/TableHeaderCustom/table_header_c
 import InputMask from "react-input-mask";
 import CustomModal from "../../components/Modal/modal_custom";
 import CustomDrawer from "../../components/Drawer/drawer_custom";
-import CustomTable from "../../components/CustomTable/table_custom";
+import CustomTable from "../../components/Table/table_custom";
 import "rsuite/dist/styles/rsuite-default.css";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";

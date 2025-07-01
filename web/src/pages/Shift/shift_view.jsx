@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Toggle, Icon, Button, SelectPicker, Modal } from "rsuite";
+import { Toggle, Icon, Button, SelectPicker } from "rsuite";
 import { AuthContext } from "../../context/auth_provider";
 import api from "../../services/api";
 import { showSuccessToast, showErrorToast } from "../../utils/notifications";
+import Modal from "../../components/Modal/modal_custom";
 import "./styles.css";
 
 // Array of days for the schedule
@@ -605,19 +606,6 @@ const Horarios = () => {
                         {/* Time slots */}
                         {daySchedules[day.value].enabled && (
                           <div className="time-slots-container">
-                            {/* Show shared schedule info */}
-                            {sharedDays.length > 0 && (
-                              <div className="shared-schedule-info mb-3">
-                                <p className="text-info mb-2">
-                                  <Icon icon="link" /> Compartilha a mesma
-                                  configuração com:{" "}
-                                  {sharedDays
-                                    .map((d) => getDayName(d))
-                                    .join(", ")}
-                                </p>
-                              </div>
-                            )}
-
                             {daySchedules[day.value].timeSlots.map(
                               (slot, index) => (
                                 <div key={index} className="mb-4">
@@ -828,36 +816,21 @@ const Horarios = () => {
       {/* Confirmation Modal */}
       <Modal
         show={confirmModal.show}
-        onHide={() => setConfirmModal({ ...confirmModal, show: false })}
+        onClose={() => setConfirmModal({ ...confirmModal, show: false })}
+        title={confirmModal.title}
+        primaryActionLabel="Confirmar"
+        onPrimaryAction={() => {
+          setConfirmModal({ ...confirmModal, show: false });
+          if (confirmModal.action && confirmModal.actionParams) {
+            confirmModal.action(...confirmModal.actionParams);
+          }
+        }}
+        secondaryActionLabel="Cancelar"
+        showFooter={true}
         size="xs"
-        backdrop="static" // Prevent closing when clicking outside
-        keyboard={false} // Prevent closing with keyboard (escape key)
+        backdrop="static"
       >
-        <Modal.Header>
-          <Modal.Title>{confirmModal.title}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>{confirmModal.message}</p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            appearance="primary"
-            onClick={() => {
-              setConfirmModal({ ...confirmModal, show: false });
-              if (confirmModal.action && confirmModal.actionParams) {
-                confirmModal.action(...confirmModal.actionParams);
-              }
-            }}
-          >
-            Confirmar
-          </Button>
-          <Button
-            appearance="subtle"
-            onClick={() => setConfirmModal({ ...confirmModal, show: false })}
-          >
-            Cancelar
-          </Button>
-        </Modal.Footer>
+        <p>{confirmModal.message}</p>
       </Modal>
     </div>
   );

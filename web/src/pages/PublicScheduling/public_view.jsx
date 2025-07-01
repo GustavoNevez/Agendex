@@ -24,6 +24,7 @@ import Step6Success from "./steps/Step6Success";
 import StepAuthAndReservations from "./steps/StepAuthAndReservations";
 import iconeAgenda3d from "../../assets/icone_agenda_3d.png";
 import iconeHorario3d from "../../assets/icone_horario_3d.png";
+import BottomNav from "./steps/BottomNav"; // NOVO IMPORT
 
 moment.locale("pt-br");
 
@@ -382,9 +383,6 @@ const PublicScheduling = () => {
       setRegistrationError(""); // Limpa erro visual após login/cadastro bem-sucedido
       setTriedSubmitLogin(false); // Limpa flag de tentativa
       setTriedSubmitRegister(false);
-      if (!clientRegistration.userToken) {
-        dispatch(updateClientRegistration({ userToken: true }));
-      }
     }
     // Após rodar, sempre volta a permitir o fluxo normal
     allowStep5Ref.current = true;
@@ -548,8 +546,13 @@ const PublicScheduling = () => {
             <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
+        {/* Mostra foto do profissional se for tipo "p" e existir, senão mostra do estabelecimento */}
         <img
-          src={publicData.estabelecimento?.foto}
+          src={
+            type === "p"
+              ? publicData.profissional?.foto || ""
+              : publicData.estabelecimento?.foto || ""
+          }
           alt="Perfil"
           className={`w-32 h-32 rounded-full object-cover border-4 border-white shadow-md transition-opacity duration-300 ${
             fotoLoaded ? "opacity-100" : "opacity-0"
@@ -561,11 +564,20 @@ const PublicScheduling = () => {
       </div>
       {/* Nome */}
       <h1 className="text-xl font-bold text-center text-gray-800 mb-1">
-        {publicData.estabelecimento?.nome}
+        {type === "p"
+          ? publicData.profissional?.nome
+          : publicData.estabelecimento?.nome}
       </h1>
       {/* Localização */}
       <div className="flex items-center justify-center gap-2 text-gray-600 text-sm mb-4 sm:text-base mb-4 text-center flex-wrap">
-        <span>{enderecoToString(publicData.estabelecimento?.endereco)}</span>
+        <span>
+          {enderecoToString(
+            type === "p"
+              ? publicData.profissional?.endereco ||
+                  publicData.estabelecimento?.endereco
+              : publicData.estabelecimento?.endereco
+          )}
+        </span>
       </div>
       {/* Botões: WhatsApp + Maps */}
       <div className="flex gap-4 mb-4">
@@ -907,13 +919,13 @@ const PublicScheduling = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 ">
+      {/* HEADER permanece aqui, acima do main */}
       {currentScreen !== "inicio" && (
         <header className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-3 max-w-screen-xl mx-auto lg:pl-60">
             <button
               onClick={() => {
                 // Corrige o fluxo do botão voltar na etapa 5 após login
-
                 if (step === 5) {
                   allowStep5Ref.current = false; // previne o efeito de forçar step 5
                   setStep(3);
@@ -932,7 +944,7 @@ const PublicScheduling = () => {
             >
               <Icon icon="chevron-left" style={{ fontSize: 20 }} />
             </button>
-            {/* ...existing code... */}
+            {/* ...você pode adicionar mais conteúdo aqui se quiser */}
           </div>
         </header>
       )}
@@ -1031,31 +1043,10 @@ const PublicScheduling = () => {
 
       {renderFinalizeButton()}
 
-      <nav className="bg-white border-t border-gray-100 flex justify-around px-4 py-2 sticky bottom-0 shadow-sm lg:justify-center lg:gap-24">
-        {[
-          { screen: "inicio", icon: "home", label: "Início" },
-          { screen: "agendar", icon: "clock-o", label: "Agendar" },
-          { screen: "reservas", icon: "calendar", label: "Reservas" },
-        ].map(({ screen, icon, label }) => {
-          const isActive = currentScreen === screen;
-          return (
-            <button
-              key={screen}
-              onClick={() => setCurrentScreen(screen)}
-              className={`flex flex-col items-center px-3 py-1 rounded-lg transition-colors duration-200 focus:outline-none
-                    ${
-                      isActive
-                        ? "text-violet-500"
-                        : "text-gray-500 hover:text-violet-400"
-                    }
-                `}
-            >
-              <Icon icon={icon} className="text-[22px]" />
-              <span className="text-[11px] font-medium mt-0.5">{label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      <BottomNav
+        currentScreen={currentScreen}
+        setCurrentScreen={setCurrentScreen}
+      />
     </div>
   );
 };

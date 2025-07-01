@@ -77,13 +77,25 @@ export function* addServico() {
     const storedUser = localStorage.getItem("@Auth:user");
     const user = JSON.parse(storedUser);
     const estabelecimentoId = user.id;
-    const servicoComEstabelecimento = { ...servico, estabelecimentoId };
 
-    const { data: response } = yield call(
-      api.post,
-      `/servico/`,
-      servicoComEstabelecimento
-    );
+    // Novo: usar FormData para foto
+    const formData = new FormData();
+    if (servico.foto instanceof File) {
+      formData.append("file", servico.foto);
+    }
+    formData.append("titulo", servico.titulo);
+    formData.append("preco", servico.preco);
+    formData.append("recorrencia", servico.recorrencia);
+    formData.append("duracao", servico.duracao);
+    formData.append("status", servico.status || "A");
+    formData.append("descricao", servico.descricao || "");
+    formData.append("estabelecimentoId", estabelecimentoId);
+
+    const { data: response } = yield call(api.post, `/servico/`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     yield put(
       updateServico({
         estadoFormulario: { ...estadoFormulario, saving: false },
@@ -172,7 +184,29 @@ export function* saveServicos() {
     const servicoId = servico.id;
     const url = `/servico/${servicoId}/${estabelecimentoId}`;
 
-    const { data: response } = yield call(api.put, url, servico);
+    // Novo: usar FormData para foto
+    const formData = new FormData();
+    if (servico.foto instanceof File) {
+      formData.append("file", servico.foto);
+    }
+
+    // Remove foto do objeto para não duplicar
+    const dataToSend = { ...servico, estabelecimentoId };
+    if (
+      dataToSend.foto instanceof File ||
+      typeof dataToSend.foto === "string"
+    ) {
+      delete dataToSend.foto;
+    }
+    delete dataToSend.fotoPreview;
+
+    formData.append("data", JSON.stringify(dataToSend));
+
+    const { data: response } = yield call(api.put, url, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     yield put(
       updateServico({
         estadoFormulario: { ...estadoFormulario, saving: false },
