@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import { AuthContext } from "../../context/auth_provider";
 import { Link } from "react-router-dom";
 import whiteLogo from "../../assets/Agendex-Branco.JPG";
@@ -32,6 +32,60 @@ const HamburgerButton = ({ isOpen, toggle, className = "" }) => {
   );
 };
 
+// Ícone de chevron para o dropdown
+const ChevronDownIcon = ({ className = "" }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 9l-7 7-7-7"
+    />
+  </svg>
+);
+
+// Ícone de usuário para o dropdown
+const UserIcon = ({ className = "" }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+    />
+  </svg>
+);
+
+// Ícone de logout
+const LogoutIcon = ({ className = "" }) => (
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+    />
+  </svg>
+);
+
 /**
  * Header responsivo simplificado
  *
@@ -44,6 +98,7 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   // Hook para detectar mudanças no tamanho da tela
   useEffect(() => {
@@ -55,10 +110,31 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Hook para fechar dropdown quando clicar fora
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [dropdownOpen]);
+
   // Função para alternar o sidebar desktop
   const handleToggleDesktopSidebar = () => {
     setDesktopSidebarOpen(!desktopSidebarOpen);
     toggleDesktopSidebar();
+  };
+
+  // Função para lidar com logout
+  const handleSignOut = () => {
+    setDropdownOpen(false);
+    signOut();
   };
 
   // Não renderiza nada se o usuário não estiver autenticado
@@ -134,30 +210,30 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
 
       {/* Header Desktop - renderizado apenas em telas médias e maiores */}
       {isDesktop && (
-        <header className="flex items-center justify-between bg-white shadow-md p-3 w-full fixed top-0 left-0 right-0 z-[150]">
+        <header className="flex items-center justify-between bg-white shadow-lg border-b border-gray-200 px-6 py-2 w-full fixed top-0 left-0 right-0 z-[150]">
           <div className="flex items-center">
             {/* Logo */}
-            <Link to="/">
-              <img src={whiteLogo} className="h-8 mr-14" alt="Logo" />
+            <Link to="/" className="flex items-center">
+              <img src={whiteLogo} className="h-8 mr-8" alt="Logo" />
             </Link>
-            {/* Botão de menu animado para desktop - posicionado mais à esquerda com área de clique maior */}
+
+            {/* Botão de menu animado para desktop */}
             <div className="flex items-center justify-center">
               <HamburgerButton
                 isOpen={desktopSidebarOpen}
                 toggle={handleToggleDesktopSidebar}
-                className="hover:bg-gray-100 transition-colors mr-3 rounded-md cursor-pointer"
+                className="hover:bg-gray-50 transition-colors duration-200 rounded-lg p-2 cursor-pointer"
               />
             </div>
-            {/* Barra de busca */}
           </div>
 
           {/* Área do usuário */}
           <div className="flex items-center">
             {/* Avatar e dropdown */}
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-200 group"
               >
                 <img
                   src={
@@ -166,30 +242,69 @@ function ResponsiveHeader({ toggleDesktopSidebar, toggleMobileSidebar }) {
                     "&background=0D8ABC&color=fff"
                   }
                   alt="User"
-                  className="w-8 h-8 rounded-full"
+                  className="w-8 h-8 rounded-full ring-2 ring-gray-200 group-hover:ring-gray-300 transition-all duration-200"
                 />
-                <span className="font-medium text-sm hidden lg:block">
-                  {user?.nome || "Usuário"}
-                </span>
+                <div className="hidden lg:flex lg:flex-col lg:items-start">
+                  <span className="font-medium text-gray-900 text-sm">
+                    {user?.nome || "Usuário"}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {user?.email || "email@example.com"}
+                  </span>
+                </div>
+                <ChevronDownIcon
+                  className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                    dropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {/* Dropdown de usuário */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
-                  <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                    <div className="font-semibold">
-                      {user?.nome || "Usuário"}
-                    </div>
-                    <div className="text-xs">
-                      {user?.email || "email@example.com"}
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-[200] animate-in fade-in slide-in-from-top-1 duration-200">
+                  {/* Informações do usuário */}
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={
+                          "https://ui-avatars.com/api/?name=" +
+                          (user?.nome || "User") +
+                          "&background=0D8ABC&color=fff"
+                        }
+                        alt="User"
+                        className="w-9 h-9 rounded-full"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 text-sm truncate">
+                          {user?.nome || "Usuário"}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {user?.email || "email@example.com"}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={signOut}
-                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                  >
-                    Sair
-                  </button>
+
+                  {/* Opções do menu */}
+                  <div className="py-1">
+                    <button
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                    >
+                      <UserIcon className="w-4 h-4 mr-3 text-gray-400" />
+                      Meu Perfil
+                    </button>
+
+                    <div className="border-t border-gray-100 my-1"></div>
+
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150"
+                    >
+                      <LogoutIcon className="w-4 h-4 mr-3 text-red-500" />
+                      Sair da conta
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
