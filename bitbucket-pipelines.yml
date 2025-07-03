@@ -1,0 +1,9 @@
+image: atlassian/default-image:3
+
+pipelines:
+  default:
+    - step:
+        name: "Liberar merge"
+        script:
+          - echo "Pipeline executada com sucesso. Nenhuma ação necessária ainda."
+
