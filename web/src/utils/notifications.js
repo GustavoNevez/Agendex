@@ -1,4 +1,4 @@
-import Toastify from 'toastify-js';
+import Toastify from "toastify-js";
 
 const defaultToastConfig = {
   duration: 5000,
@@ -6,15 +6,15 @@ const defaultToastConfig = {
   gravity: "bottom", // Mudado para bottom
   position: "center",
   offset: {
-    y: "4rem" // Adiciona 64px de espaço na parte inferior
+    y: "4rem", // Adiciona 64px de espaço na parte inferior
   },
   style: {
     borderRadius: "8px",
     padding: "12px 24px",
     fontSize: "14px",
     fontWeight: "500",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
-  }
+    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+  },
 };
 
 export const showSuccessToast = (message) => {
