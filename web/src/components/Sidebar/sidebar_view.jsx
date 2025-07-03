@@ -124,10 +124,12 @@ function ResponsiveSidebar({
                       } hover:bg-gray-700 hover:no-underline hover:text-white`}
                       style={{ textDecoration: "none" }}
                     >
-                      <span className="text-xl">{item.icon}</span>
-                      {isOpen && <span className="ml-3">{item.text}</span>}
+                      <span className="text-2xl">{item.icon}</span>
+                      {isOpen && (
+                        <span className="ml-3 text-[17px]">{item.text}</span>
+                      )}
                       {isOpen && item.submenu && (
-                        <ChevronRight size={16} className="ml-auto" />
+                        <ChevronRight size={22} className="ml-auto" />
                       )}
                     </Link>
 
@@ -143,7 +145,7 @@ function ResponsiveSidebar({
                                 : "text-gray-300 hover:bg-gray-700"
                             }`}
                           >
-                            <span>{subitem.text}</span>
+                            <span className="text-base">{subitem.text}</span>
                           </Link>
                         ))}
                       </div>
@@ -236,10 +238,10 @@ function ResponsiveSidebar({
                         } hover:bg-gray-700 hover:no-underline hover:text-white`}
                         style={{ textDecoration: "none" }}
                       >
-                        <span className="text-xl">{item.icon}</span>
-                        <span className="ml-3">{item.text}</span>
+                        <span className="text-2xl">{item.icon}</span>
+                        <span className="ml-3 text-[17px]">{item.text}</span>
                         {item.submenu && (
-                          <ChevronRight size={16} className="ml-auto" />
+                          <ChevronRight size={18} className="ml-auto" />
                         )}
                       </Link>
 
@@ -256,7 +258,7 @@ function ResponsiveSidebar({
                                   : "text-gray-300 hover:bg-gray-700"
                               }`}
                             >
-                              <span>{subitem.text}</span>
+                              <span className="text-base">{subitem.text}</span>
                             </Link>
                           ))}
                         </div>
