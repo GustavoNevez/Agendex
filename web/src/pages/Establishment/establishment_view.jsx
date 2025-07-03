@@ -7,6 +7,7 @@ import {
 } from "../../store/modules/establishment/establishment_actions";
 import { Button, Icon } from "rsuite";
 import { WarningModal } from "../../components/Modal/modal_custom";
+import InputWithLabel from "../../components/Form/InputWithLabel";
 
 // Máscara visual para telefone: (XX)9XXXX-XXXX
 function maskPhone(value) {
@@ -162,7 +163,10 @@ const Establishment = () => {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
+    <div
+      className="p-4 max-w-2xl mx-auto"
+      style={{ animation: "fadeIn 0.3s ease-in-out" }}
+    >
       {/* Modal de confirmação */}
       <WarningModal
         show={showConfirmModal}
@@ -212,98 +216,55 @@ const Establishment = () => {
               </label>
             </div>
           </div>
-          <div className="mb-4">
-            <label className="block font-medium mb-2">
-              Nome do Estabelecimento
-            </label>
-            <input
-              type="text"
-              className="form-control w-full"
-              value={estabelecimento.nome}
-              onChange={(e) => handleChange("nome", e.target.value)}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block font-medium mb-2">E-mail</label>
-            <input
-              type="email"
-              className="form-control w-full"
-              value={estabelecimento.email || ""}
-              onChange={(e) => handleChange("email", e.target.value)}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block font-medium mb-2">Telefone</label>
-            <input
-              type="text"
-              className="form-control w-full"
-              value={telefoneInput}
-              onChange={(e) => handleChange("telefone", e.target.value)}
-              placeholder="(99) 99999-9999"
-              maxLength={15}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block font-medium mb-2">Link Personalizado</label>
-            <input
-              type="text"
-              className="form-control w-full"
-              value={estabelecimento.customLink || ""}
-              onChange={(e) =>
-                handleChange(
-                  "customLink",
-                  e.target.value.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase()
-                )
-              }
-              placeholder="meu-estabelecimento"
-            />
-            <div className="mt-2">
-              <small className="text-gray-500 block mb-2">
-                Use apenas letras, números e hífens.
-              </small>
-              {estabelecimento.customLink && (
-                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                  <label className="text-sm text-gray-600 block mb-1">
-                    URL do seu estabelecimento:
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-white px-3 py-2 rounded text-sm break-all">
-                      {`http://localhost:3001/public/e/${estabelecimento.customLink}`}
-                    </code>
-                    <Button
-                      appearance="subtle"
-                      size="sm"
-                      onClick={() =>
-                        navigator.clipboard.writeText(
-                          `http://localhost:3001/public/e/${estabelecimento.customLink}`
-                        )
-                      }
-                    >
-                      <Icon icon="copy" /> Copiar
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <InputWithLabel
+            label="Nome do Estabelecimento"
+            type="text"
+            value={estabelecimento.nome}
+            onChange={(e) => handleChange("nome", e.target.value)}
+            required
+          />
+          <InputWithLabel
+            label="E-mail"
+            type="email"
+            value={estabelecimento.email || ""}
+            onChange={(e) => handleChange("email", e.target.value)}
+            required
+          />
+          <InputWithLabel
+            label="Telefone"
+            type="text"
+            value={telefoneInput}
+            onChange={(e) => handleChange("telefone", e.target.value)}
+            placeholder="(99) 99999-9999"
+            maxLength={15}
+          />
+          <InputWithLabel
+            label="Link Personalizado"
+            type="text"
+            value={estabelecimento.customLink || ""}
+            onChange={(e) =>
+              handleChange(
+                "customLink",
+                e.target.value.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase()
+              )
+            }
+            placeholder="meu-estabelecimento"
+          />
+
           <div className="mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block font-medium mb-2">Rua</label>
-                <input
+                <InputWithLabel
+                  label="Rua"
                   type="text"
-                  className="form-control w-full"
                   value={endereco.rua}
                   onChange={(e) => handleEnderecoChange("rua", e.target.value)}
                 />
               </div>
               <div>
-                <label className="block font-medium mb-2">Número</label>
-                <input
+                <InputWithLabel
+                  label="Número"
                   type="text"
-                  className="form-control w-full"
                   value={endereco.numero}
                   onChange={(e) =>
                     handleEnderecoChange("numero", e.target.value)
@@ -311,10 +272,9 @@ const Establishment = () => {
                 />
               </div>
               <div>
-                <label className="block font-medium mb-2">Bairro</label>
-                <input
+                <InputWithLabel
+                  label="Bairro"
                   type="text"
-                  className="form-control w-full"
                   value={endereco.bairro}
                   onChange={(e) =>
                     handleEnderecoChange("bairro", e.target.value)
@@ -322,10 +282,9 @@ const Establishment = () => {
                 />
               </div>
               <div>
-                <label className="block font-medium mb-2">Cidade</label>
-                <input
+                <InputWithLabel
+                  label="Cidade"
                   type="text"
-                  className="form-control w-full"
                   value={endereco.cidade}
                   onChange={(e) =>
                     handleEnderecoChange("cidade", e.target.value)
@@ -333,10 +292,9 @@ const Establishment = () => {
                 />
               </div>
               <div>
-                <label className="block font-medium mb-2">Estado</label>
-                <input
+                <InputWithLabel
+                  label="Estado"
                   type="text"
-                  className="form-control w-full"
                   value={endereco.estado}
                   onChange={(e) =>
                     handleEnderecoChange("estado", e.target.value)
@@ -344,19 +302,17 @@ const Establishment = () => {
                 />
               </div>
               <div>
-                <label className="block font-medium mb-2">CEP</label>
-                <input
+                <InputWithLabel
+                  label="CEP"
                   type="text"
-                  className="form-control w-full"
                   value={endereco.cep}
                   onChange={(e) => handleEnderecoChange("cep", e.target.value)}
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="block font-medium mb-2">Complemento</label>
-                <input
+              <div>
+                <InputWithLabel
+                  label="Complemento"
                   type="text"
-                  className="form-control w-full"
                   value={endereco.complemento}
                   onChange={(e) =>
                     handleEnderecoChange("complemento", e.target.value)
@@ -364,7 +320,7 @@ const Establishment = () => {
                 />
               </div>
             </div>
-            <div className="mt-3">
+            <div>
               <Button
                 appearance="ghost"
                 color="green"
@@ -389,6 +345,31 @@ const Establishment = () => {
                 <Icon icon="map-marker" /> Ver no Google Maps
               </Button>
             </div>
+          </div>
+          <div className="mt-2">
+            {estabelecimento.customLink && (
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <label className="text-sm text-gray-600 block mb-1">
+                  URL do seu estabelecimento:
+                </label>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-white px-3 py-2 rounded text-sm break-all">
+                    {`http://localhost:3001/public/e/${estabelecimento.customLink}`}
+                  </code>
+                  <Button
+                    appearance="subtle"
+                    size="sm"
+                    onClick={() =>
+                      navigator.clipboard.writeText(
+                        `http://localhost:3001/public/e/${estabelecimento.customLink}`
+                      )
+                    }
+                  >
+                    <Icon icon="copy" /> Copiar
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="mt-6">
             <Button
