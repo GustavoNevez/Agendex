@@ -48,6 +48,7 @@ const Agendamentos = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedPrice, setSelectedPrice] = useState(null);
   const [selectedProfessional, setSelectedProfessional] = useState(null);
+  const [selectedQtdVagas, setSelectedQtdVagas] = useState(1);
 
   // Loading states
   const [isCalendarLoading, setIsCalendarLoading] = useState(true);
@@ -406,6 +407,7 @@ const Agendamentos = () => {
         clienteId: selectedClient,
         valor: selectedPrice,
         profissionalId: selectedProfessional,
+        quantidade: selectedQtdVagas, // NOVO: envia quantidade de vagas
       };
 
       // First close the confirmation modal
@@ -702,6 +704,25 @@ const Agendamentos = () => {
     selectedClient &&
     selectedProfessional;
 
+  // Novo: processa horários disponíveis com vagasRestantes
+  const [horariosComVagas, setHorariosComVagas] = useState([]);
+  useEffect(() => {
+    // Exemplo: se o backend já retorna [{ horario: "09:00", vagasRestantes: 2 }, ...]
+    // Caso contrário, adapte para transformar o array de horários simples em objetos
+    if (Array.isArray(availableTimes) && availableTimes.length > 0) {
+      if (typeof availableTimes[0] === "object" && availableTimes[0].horario) {
+        setHorariosComVagas(availableTimes);
+      } else {
+        // fallback para array simples de string
+        setHorariosComVagas(
+          availableTimes.map((h) => ({ horario: h, vagasRestantes: 1 }))
+        );
+      }
+    } else {
+      setHorariosComVagas([]);
+    }
+  }, [availableTimes]);
+
   return (
     <div className="p-4">
       {/* AVISO DE ENTIDADES FALTANDO */}
@@ -970,17 +991,61 @@ const Agendamentos = () => {
               </div>
               <div className="mb-4">
                 <div className="w-full">
-                  <InputSelectPicker
-                    label="Horário"
-                    required
-                    data={availableTimes.map((time) => ({
-                      label: time,
-                      value: time,
-                    }))}
-                    value={selectedTime}
-                    onChange={setSelectedTime}
-                    placeholder="Selecione um horário"
-                  />
+                  {/* NOVO: Seleção de horário com vagas */}
+                  <label className="block font-medium mb-1">
+                    Horário <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="form-control"
+                    value={selectedTime || ""}
+                    onChange={(e) => {
+                      setSelectedTime(e.target.value);
+                      setSelectedQtdVagas(1);
+                    }}
+                  >
+                    <option value="">Selecione um horário</option>
+                    {horariosComVagas.map((h) => (
+                      <option key={h.horario} value={h.horario}>
+                        {h.horario}{" "}
+                        {h.vagasRestantes > 1
+                          ? `(${h.vagasRestantes} vagas)`
+                          : "(1 vaga)"}
+                      </option>
+                    ))}
+                  </select>
+                  {/* Se o horário selecionado tem mais de 1 vaga, mostra select para quantidade */}
+                  {selectedTime &&
+                    (() => {
+                      const horarioObj = horariosComVagas.find(
+                        (h) => h.horario === selectedTime
+                      );
+                      if (horarioObj && horarioObj.vagasRestantes > 1) {
+                        return (
+                          <div className="mt-2">
+                            <label className="block font-medium mb-1">
+                              Quantidade de vagas
+                            </label>
+                            <select
+                              className="form-control"
+                              value={selectedQtdVagas}
+                              onChange={(e) =>
+                                setSelectedQtdVagas(Number(e.target.value))
+                              }
+                            >
+                              {Array.from(
+                                { length: horarioObj.vagasRestantes },
+                                (_, i) => i + 1
+                              ).map((v) => (
+                                <option key={v} value={v}>
+                                  {v}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                 </div>
               </div>
             </div>
