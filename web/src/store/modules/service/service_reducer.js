@@ -8,6 +8,7 @@ const INITIAL_STATE = {
     descricao: "",
     foto: "", // novo campo
     fotoPreview: null, // novo campo
+    vagasPorHorario: 1, // novo campo
   },
   servicos: [],
   componentes: {
