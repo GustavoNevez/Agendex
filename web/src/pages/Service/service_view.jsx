@@ -328,6 +328,22 @@ const Servicos = () => {
             />
           </div>
 
+          {/* NOVO CAMPO: Vagas por Horário */}
+          <div className="form-group col-md-4 col-sm-12 mb-3">
+            <b className="">Vagas por Horário</b>
+            <input
+              type="number"
+              className="form-control"
+              name="vagasPorHorario"
+              min="1"
+              value={servico.vagasPorHorario || ""}
+              onChange={(e) =>
+                selecionarServico("vagasPorHorario", Number(e.target.value))
+              }
+            />
+          </div>
+          {/* FIM NOVO CAMPO */}
+
           <div className="form-group col-md-4 col-sm-12 mb-3">
             <b className="d-block">Duração</b>
             <select

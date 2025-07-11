@@ -90,6 +90,8 @@ export function* addServico() {
     formData.append("status", servico.status || "A");
     formData.append("descricao", servico.descricao || "");
     formData.append("estabelecimentoId", estabelecimentoId);
+    // NOVO: adicionar vagasPorHorario
+    formData.append("vagasPorHorario", servico.vagasPorHorario || 1);
 
     const { data: response } = yield call(api.post, `/servico/`, formData, {
       headers: {
@@ -199,6 +201,11 @@ export function* saveServicos() {
       delete dataToSend.foto;
     }
     delete dataToSend.fotoPreview;
+
+    // NOVO: garantir vagasPorHorario está presente
+    if (!dataToSend.vagasPorHorario) {
+      dataToSend.vagasPorHorario = 1;
+    }
 
     formData.append("data", JSON.stringify(dataToSend));
 
