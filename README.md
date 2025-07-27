@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 780a20107c2bcf358be1ee9ef97e34de0ba66372
+
 
 # Sistema de Gerenciamento de Agendamentos
 
@@ -48,7 +44,3 @@ Logo depois, rodar a aplicação web:
 ou
     yarn start
 ```
-<<<<<<< HEAD
->>>>>>> 7e3dd08 (Update README.md)
-=======
->>>>>>> 780a20107c2bcf358be1ee9ef97e34de0ba66372
