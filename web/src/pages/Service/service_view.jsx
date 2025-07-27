@@ -241,8 +241,18 @@ const Servicos = () => {
         primaryActionColor="green"
         primaryActionDisabled={
           !servico.titulo ||
-          !servico.preco ||
-          !servico.recorrencia ||
+          servico.preco === "" ||
+          servico.preco === null ||
+          servico.preco === undefined ||
+          Number.isNaN(Number(servico.preco)) ||
+          servico.recorrencia === "" ||
+          servico.recorrencia === null ||
+          servico.recorrencia === undefined ||
+          Number.isNaN(Number(servico.recorrencia)) ||
+          servico.vagasPorHorario === "" ||
+          servico.vagasPorHorario === null ||
+          servico.vagasPorHorario === undefined ||
+          Number.isNaN(Number(servico.vagasPorHorario)) ||
           !servico.duracao ||
           !servico.status ||
           !servico.descricao
